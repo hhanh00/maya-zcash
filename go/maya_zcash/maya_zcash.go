@@ -346,12 +346,36 @@ func uniffiCheckChecksums() {
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_get_latest_height(uniffiStatus)
 		})
-		if checksum != 2794 {
+		if checksum != 41262 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_latest_height: UniFFI API checksum mismatch")
 		}
 	}
 }
+
+type FfiConverterUint32 struct{}
+
+var FfiConverterUint32INSTANCE = FfiConverterUint32{}
+
+func (FfiConverterUint32) Lower(value uint32) C.uint32_t {
+	return C.uint32_t(value)
+}
+
+func (FfiConverterUint32) Write(writer io.Writer, value uint32) {
+	writeUint32(writer, value)
+}
+
+func (FfiConverterUint32) Lift(value C.uint32_t) uint32 {
+	return uint32(value)
+}
+
+func (FfiConverterUint32) Read(reader io.Reader) uint32 {
+	return readUint32(reader)
+}
+
+type FfiDestroyerUint32 struct{}
+
+func (FfiDestroyerUint32) Destroy(_ uint32) {}
 
 type FfiConverterString struct{}
 
@@ -447,6 +471,46 @@ type FfiDestroyerBytes struct{}
 
 func (FfiDestroyerBytes) Destroy(_ []byte) {}
 
+type Height struct {
+	Number uint32
+	Hash   []byte
+}
+
+func (r *Height) Destroy() {
+	FfiDestroyerUint32{}.Destroy(r.Number)
+	FfiDestroyerBytes{}.Destroy(r.Hash)
+}
+
+type FfiConverterTypeHeight struct{}
+
+var FfiConverterTypeHeightINSTANCE = FfiConverterTypeHeight{}
+
+func (c FfiConverterTypeHeight) Lift(rb RustBufferI) Height {
+	return LiftFromRustBuffer[Height](c, rb)
+}
+
+func (c FfiConverterTypeHeight) Read(reader io.Reader) Height {
+	return Height{
+		FfiConverterUint32INSTANCE.Read(reader),
+		FfiConverterBytesINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeHeight) Lower(value Height) RustBuffer {
+	return LowerIntoRustBuffer[Height](c, value)
+}
+
+func (c FfiConverterTypeHeight) Write(writer io.Writer, value Height) {
+	FfiConverterUint32INSTANCE.Write(writer, value.Number)
+	FfiConverterBytesINSTANCE.Write(writer, value.Hash)
+}
+
+type FfiDestroyerTypeHeight struct{}
+
+func (_ FfiDestroyerTypeHeight) Destroy(value Height) {
+	value.Destroy()
+}
+
 type ZcashError struct {
 	err error
 }
@@ -516,14 +580,14 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 	}
 }
 
-func GetLatestHeight() ([]byte, error) {
+func GetLatestHeight() (Height, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_maya_zcash_fn_func_get_latest_height(_uniffiStatus)
 	})
 	if _uniffiErr != nil {
-		var _uniffiDefaultValue []byte
+		var _uniffiDefaultValue Height
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterBytesINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterTypeHeightINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }

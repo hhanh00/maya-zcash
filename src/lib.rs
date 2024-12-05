@@ -1,4 +1,3 @@
-pub mod data_generated;
 pub mod config;
 pub mod rpc;
 pub mod chain;
@@ -14,6 +13,11 @@ use tokio::runtime::Runtime;
 pub enum ZcashError {
     #[error("RPC Error: {0}")]
     RPC(String),
+}
+
+pub struct Height {
+    number: u32,
+    hash: Vec<u8>,
 }
 
 lazy_static::lazy_static! {
@@ -36,16 +40,13 @@ uniffi::include_scaffolding!("interface");
 
 #[macro_export]
 macro_rules! uniffi_export {
-    ($config:ident, $t:ty, $block:block) => {
+    ($config:ident, $block:block) => {
         {
             let context = CONTEXT.lock();
             let $config = &context.config;
             context.runtime.block_on(async {
-                let res: $t = $block;
-                let mut fb = flatbuffers::FlatBufferBuilder::new();
-                let root = res.pack(&mut fb);
-                fb.finish_minimal(root);
-                Ok::<_, ZcashError>(fb.finished_data().to_vec())
+                let res = $block;
+                Ok::<_, ZcashError>(res)
             })
         }
     };

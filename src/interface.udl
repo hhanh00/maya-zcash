@@ -3,7 +3,13 @@ enum ZcashError {
     "RPC",
 };
 
+dictionary Height {
+    u32 number;
+    bytes hash;
+};
+
 namespace maya_zcash {
+
     [Throws=ZcashError]
-    bytes get_latest_height();
+    Height get_latest_height();
 };
