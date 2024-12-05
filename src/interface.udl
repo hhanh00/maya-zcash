@@ -1,0 +1,9 @@
+[Error]
+enum ZcashError {
+    "RPC",
+};
+
+namespace maya_zcash {
+    [Throws=ZcashError]
+    bytes get_latest_height();
+};

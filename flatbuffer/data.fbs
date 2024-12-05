@@ -1,0 +1,6 @@
+namespace fb;
+
+table Height {
+    number: uint32;
+    hash: [ubyte];
+}
