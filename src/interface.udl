@@ -15,4 +15,7 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     string get_vault_address(bytes pubkey);
+
+    [Throws=ZcashError]
+    boolean validate_address(string address);
 };

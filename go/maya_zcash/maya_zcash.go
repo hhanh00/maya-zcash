@@ -360,6 +360,15 @@ func uniffiCheckChecksums() {
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_vault_address: UniFFI API checksum mismatch")
 		}
 	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_validate_address(uniffiStatus)
+		})
+		if checksum != 64411 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_validate_address: UniFFI API checksum mismatch")
+		}
+	}
 }
 
 type FfiConverterUint32 struct{}
@@ -385,6 +394,37 @@ func (FfiConverterUint32) Read(reader io.Reader) uint32 {
 type FfiDestroyerUint32 struct{}
 
 func (FfiDestroyerUint32) Destroy(_ uint32) {}
+
+type FfiConverterBool struct{}
+
+var FfiConverterBoolINSTANCE = FfiConverterBool{}
+
+func (FfiConverterBool) Lower(value bool) C.int8_t {
+	if value {
+		return C.int8_t(1)
+	}
+	return C.int8_t(0)
+}
+
+func (FfiConverterBool) Write(writer io.Writer, value bool) {
+	if value {
+		writeInt8(writer, 1)
+	} else {
+		writeInt8(writer, 0)
+	}
+}
+
+func (FfiConverterBool) Lift(value C.int8_t) bool {
+	return value != 0
+}
+
+func (FfiConverterBool) Read(reader io.Reader) bool {
+	return readInt8(reader) != 0
+}
+
+type FfiDestroyerBool struct{}
+
+func (FfiDestroyerBool) Destroy(_ bool) {}
 
 type FfiConverterString struct{}
 
@@ -633,5 +673,17 @@ func GetVaultAddress(pubkey []byte) (string, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func ValidateAddress(address string) (bool, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) C.int8_t {
+		return C.uniffi_maya_zcash_fn_func_validate_address(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue bool
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterBoolINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }

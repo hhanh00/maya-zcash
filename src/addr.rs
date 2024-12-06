@@ -1,5 +1,6 @@
 use anyhow::Result;
 use sha2::Digest as _;
+use zcash_keys::address::Address;
 use zcash_primitives::legacy::TransparentAddress;
 
 use crate::{uniffi_export, ZcashError};
@@ -17,4 +18,11 @@ pub fn get_vault_address(pubkey: Vec<u8>) -> Result<String, ZcashError> {
         taddr
     });
     Ok(taddr)
+}
+
+pub fn validate_address(address: String) -> Result<bool, ZcashError> {
+    uniffi_export!(config, {
+        let r = Address::decode(&config.network(), &address);
+        Ok(r.is_some())
+    })
 }

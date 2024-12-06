@@ -77,6 +77,11 @@ RustBuffer uniffi_maya_zcash_fn_func_get_vault_address(
 	RustCallStatus* out_status
 );
 
+int8_t uniffi_maya_zcash_fn_func_validate_address(
+	RustBuffer address,
+	RustCallStatus* out_status
+);
+
 RustBuffer ffi_maya_zcash_rustbuffer_alloc(
 	int32_t size,
 	RustCallStatus* out_status
@@ -381,6 +386,10 @@ uint16_t uniffi_maya_zcash_checksum_func_get_latest_height(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_get_vault_address(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_validate_address(
 	RustCallStatus* out_status
 );
 

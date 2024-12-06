@@ -38,7 +38,7 @@ fn init() -> Context {
 }
 
 use crate::chain::get_latest_height;
-use crate::addr::get_vault_address;
+use crate::addr::{get_vault_address, validate_address};
 
 uniffi::include_scaffolding!("interface");
 
