@@ -77,6 +77,16 @@ RustBuffer uniffi_maya_zcash_fn_func_get_vault_address(
 	RustCallStatus* out_status
 );
 
+void uniffi_maya_zcash_fn_func_init_logger(
+	RustCallStatus* out_status
+);
+
+int8_t uniffi_maya_zcash_fn_func_match_with_blockchain_receiver(
+	RustBuffer address,
+	RustBuffer receiver,
+	RustCallStatus* out_status
+);
+
 int8_t uniffi_maya_zcash_fn_func_validate_address(
 	RustBuffer address,
 	RustCallStatus* out_status
@@ -386,6 +396,14 @@ uint16_t uniffi_maya_zcash_checksum_func_get_latest_height(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_get_vault_address(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_init_logger(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver(
 	RustCallStatus* out_status
 );
 

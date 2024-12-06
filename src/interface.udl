@@ -2,6 +2,9 @@
 enum ZcashError {
     "RPC",
     "InvalidPubkeyLength",
+    "InvalidAddress",
+    "NoOrchardReceiver",
+    "AssertError",
 };
 
 dictionary Height {
@@ -10,6 +13,8 @@ dictionary Height {
 };
 
 namespace maya_zcash {
+    void init_logger();
+
     [Throws=ZcashError]
     Height get_latest_height();
 
@@ -18,4 +23,7 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     boolean validate_address(string address);
+
+    [Throws=ZcashError]
+    boolean match_with_blockchain_receiver(string address, string receiver);
 };

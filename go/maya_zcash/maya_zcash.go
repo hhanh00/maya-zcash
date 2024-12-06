@@ -362,6 +362,24 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_init_logger(uniffiStatus)
+		})
+		if checksum != 363 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_init_logger: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver(uniffiStatus)
+		})
+		if checksum != 55511 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_validate_address(uniffiStatus)
 		})
 		if checksum != 64411 {
@@ -575,6 +593,9 @@ func (err ZcashError) Unwrap() error {
 // Err* are used for checking error type with `errors.Is`
 var ErrZcashErrorRpc = fmt.Errorf("ZcashErrorRpc")
 var ErrZcashErrorInvalidPubkeyLength = fmt.Errorf("ZcashErrorInvalidPubkeyLength")
+var ErrZcashErrorInvalidAddress = fmt.Errorf("ZcashErrorInvalidAddress")
+var ErrZcashErrorNoOrchardReceiver = fmt.Errorf("ZcashErrorNoOrchardReceiver")
+var ErrZcashErrorAssertError = fmt.Errorf("ZcashErrorAssertError")
 
 // Variant structs
 type ZcashErrorRpc struct {
@@ -613,6 +634,60 @@ func (self ZcashErrorInvalidPubkeyLength) Is(target error) bool {
 	return target == ErrZcashErrorInvalidPubkeyLength
 }
 
+type ZcashErrorInvalidAddress struct {
+	message string
+}
+
+func NewZcashErrorInvalidAddress() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorInvalidAddress{},
+	}
+}
+
+func (err ZcashErrorInvalidAddress) Error() string {
+	return fmt.Sprintf("InvalidAddress: %s", err.message)
+}
+
+func (self ZcashErrorInvalidAddress) Is(target error) bool {
+	return target == ErrZcashErrorInvalidAddress
+}
+
+type ZcashErrorNoOrchardReceiver struct {
+	message string
+}
+
+func NewZcashErrorNoOrchardReceiver() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorNoOrchardReceiver{},
+	}
+}
+
+func (err ZcashErrorNoOrchardReceiver) Error() string {
+	return fmt.Sprintf("NoOrchardReceiver: %s", err.message)
+}
+
+func (self ZcashErrorNoOrchardReceiver) Is(target error) bool {
+	return target == ErrZcashErrorNoOrchardReceiver
+}
+
+type ZcashErrorAssertError struct {
+	message string
+}
+
+func NewZcashErrorAssertError() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorAssertError{},
+	}
+}
+
+func (err ZcashErrorAssertError) Error() string {
+	return fmt.Sprintf("AssertError: %s", err.message)
+}
+
+func (self ZcashErrorAssertError) Is(target error) bool {
+	return target == ErrZcashErrorAssertError
+}
+
 type FfiConverterTypeZcashError struct{}
 
 var FfiConverterTypeZcashErrorINSTANCE = FfiConverterTypeZcashError{}
@@ -634,6 +709,12 @@ func (c FfiConverterTypeZcashError) Read(reader io.Reader) *ZcashError {
 		return &ZcashError{&ZcashErrorRpc{message}}
 	case 2:
 		return &ZcashError{&ZcashErrorInvalidPubkeyLength{message}}
+	case 3:
+		return &ZcashError{&ZcashErrorInvalidAddress{message}}
+	case 4:
+		return &ZcashError{&ZcashErrorNoOrchardReceiver{message}}
+	case 5:
+		return &ZcashError{&ZcashErrorAssertError{message}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeZcashError.Read()", errorID))
 	}
@@ -646,6 +727,12 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 		writeInt32(writer, 1)
 	case *ZcashErrorInvalidPubkeyLength:
 		writeInt32(writer, 2)
+	case *ZcashErrorInvalidAddress:
+		writeInt32(writer, 3)
+	case *ZcashErrorNoOrchardReceiver:
+		writeInt32(writer, 4)
+	case *ZcashErrorAssertError:
+		writeInt32(writer, 5)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeZcashError.Write", value))
@@ -673,6 +760,25 @@ func GetVaultAddress(pubkey []byte) (string, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func InitLogger() {
+	rustCall(func(_uniffiStatus *C.RustCallStatus) bool {
+		C.uniffi_maya_zcash_fn_func_init_logger(_uniffiStatus)
+		return false
+	})
+}
+
+func MatchWithBlockchainReceiver(address string, receiver string) (bool, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) C.int8_t {
+		return C.uniffi_maya_zcash_fn_func_match_with_blockchain_receiver(FfiConverterStringINSTANCE.Lower(address), FfiConverterStringINSTANCE.Lower(receiver), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue bool
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterBoolINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

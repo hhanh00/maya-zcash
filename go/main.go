@@ -7,6 +7,8 @@ import (
 )
 
 func main() {
+    maya_zcash.InitLogger();
+
     // Call the Rust function
     height, err := maya_zcash.GetLatestHeight()
     if err != nil {
@@ -24,5 +26,9 @@ func main() {
     fmt.Println(valid)
 
     valid, _ = maya_zcash.ValidateAddress("t1invalidaddress")
+    fmt.Println(valid)
+
+    // TODO Add more test cases
+    valid, _ = maya_zcash.MatchWithBlockchainReceiver("t1ev8Fuh8t1bqheZZa7974j5jwKCjVcP7Pq", "t1ev8Fuh8t1bqheZZa7974j5jwKCjVcP7Pq")
     fmt.Println(valid)
 }

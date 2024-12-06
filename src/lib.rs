@@ -9,6 +9,9 @@ use config::Context;
 use parking_lot::Mutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
+use tracing_subscriber::util::SubscriberInitExt as _;
+use tracing_subscriber::{fmt, EnvFilter};
+use tracing_subscriber::layer::SubscriberExt as _;
 
 #[derive(Debug, Error)]
 pub enum ZcashError {
@@ -16,6 +19,12 @@ pub enum ZcashError {
     RPC(String),
     #[error("PubKey must be 33 bytes long: {0}")]
     InvalidPubkeyLength(String),
+    #[error("Invalid address: {0}")]
+    InvalidAddress(String),
+    #[error("No Orchard receiver")]
+    NoOrchardReceiver,
+    #[error("Assertion Failed: {0}")]
+    AssertError(String),
 }
 
 pub struct Height {
@@ -37,8 +46,15 @@ fn init() -> Context {
     context
 }
 
+pub fn init_logger() {
+    tracing_subscriber::registry()
+    .with(fmt::layer())
+    .with(EnvFilter::from_default_env())
+    .init();    
+}
+
 use crate::chain::get_latest_height;
-use crate::addr::{get_vault_address, validate_address};
+use crate::addr::{get_vault_address, validate_address, match_with_blockchain_receiver};
 
 uniffi::include_scaffolding!("interface");
 
