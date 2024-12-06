@@ -1,10 +1,10 @@
 use anyhow::Result;
 use uuid::Uuid;
 
-use crate::{rpc::json_request, uniffi_export, Height, ZcashError, CONTEXT};
+use crate::{rpc::json_request, uniffi_async_export, Height, ZcashError, CONTEXT};
 
 pub fn get_latest_height() -> Result<Height, ZcashError> {
-    uniffi_export!(config, {
+    uniffi_async_export!(config, {
         let id = Uuid::new_v4().to_string();
 
         let result = json_request(config, &id, "getblockcount", vec![]).await

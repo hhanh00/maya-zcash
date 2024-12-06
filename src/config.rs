@@ -1,6 +1,7 @@
 use anyhow::Result;
 use figment::{providers::{Format as _, Yaml}, Figment};
 use tokio::runtime::Runtime;
+use zcash_protocol::consensus::{MainNetwork, Network};
 use std::{fs::File, io::Read, path::Path};
 
 use serde::Deserialize;
@@ -15,6 +16,18 @@ pub struct Server {
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub server: Server,
+    pub mainnet: bool,
+}
+
+impl Config {
+    pub fn network(&self) -> Network {
+        if self.mainnet {
+            Network::MainNetwork
+        }
+        else {
+            Network::TestNetwork
+        }
+    }
 }
 
 pub struct Context {

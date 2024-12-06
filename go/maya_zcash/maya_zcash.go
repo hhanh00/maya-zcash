@@ -351,6 +351,15 @@ func uniffiCheckChecksums() {
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_latest_height: UniFFI API checksum mismatch")
 		}
 	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_get_vault_address(uniffiStatus)
+		})
+		if checksum != 10814 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_vault_address: UniFFI API checksum mismatch")
+		}
+	}
 }
 
 type FfiConverterUint32 struct{}
@@ -525,6 +534,7 @@ func (err ZcashError) Unwrap() error {
 
 // Err* are used for checking error type with `errors.Is`
 var ErrZcashErrorRpc = fmt.Errorf("ZcashErrorRpc")
+var ErrZcashErrorInvalidPubkeyLength = fmt.Errorf("ZcashErrorInvalidPubkeyLength")
 
 // Variant structs
 type ZcashErrorRpc struct {
@@ -543,6 +553,24 @@ func (err ZcashErrorRpc) Error() string {
 
 func (self ZcashErrorRpc) Is(target error) bool {
 	return target == ErrZcashErrorRpc
+}
+
+type ZcashErrorInvalidPubkeyLength struct {
+	message string
+}
+
+func NewZcashErrorInvalidPubkeyLength() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorInvalidPubkeyLength{},
+	}
+}
+
+func (err ZcashErrorInvalidPubkeyLength) Error() string {
+	return fmt.Sprintf("InvalidPubkeyLength: %s", err.message)
+}
+
+func (self ZcashErrorInvalidPubkeyLength) Is(target error) bool {
+	return target == ErrZcashErrorInvalidPubkeyLength
 }
 
 type FfiConverterTypeZcashError struct{}
@@ -564,6 +592,8 @@ func (c FfiConverterTypeZcashError) Read(reader io.Reader) *ZcashError {
 	switch errorID {
 	case 1:
 		return &ZcashError{&ZcashErrorRpc{message}}
+	case 2:
+		return &ZcashError{&ZcashErrorInvalidPubkeyLength{message}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeZcashError.Read()", errorID))
 	}
@@ -574,6 +604,8 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 	switch variantValue := value.err.(type) {
 	case *ZcashErrorRpc:
 		writeInt32(writer, 1)
+	case *ZcashErrorInvalidPubkeyLength:
+		writeInt32(writer, 2)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeZcashError.Write", value))
@@ -589,5 +621,17 @@ func GetLatestHeight() (Height, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeHeightINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func GetVaultAddress(pubkey []byte) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_get_vault_address(FfiConverterBytesINSTANCE.Lower(pubkey), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }

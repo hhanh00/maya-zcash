@@ -1,6 +1,7 @@
 [Error]
 enum ZcashError {
     "RPC",
+    "InvalidPubkeyLength",
 };
 
 dictionary Height {
@@ -9,7 +10,9 @@ dictionary Height {
 };
 
 namespace maya_zcash {
-
     [Throws=ZcashError]
     Height get_latest_height();
+
+    [Throws=ZcashError]
+    string get_vault_address(bytes pubkey);
 };

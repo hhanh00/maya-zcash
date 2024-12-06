@@ -2,3 +2,4 @@ server:
   host: http://172.16.11.208:18232
   user: mayachain
   password: password
+mainnet: true

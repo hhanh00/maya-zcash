@@ -1,6 +1,7 @@
 pub mod config;
 pub mod rpc;
 pub mod chain;
+pub mod addr;
 
 use std::path::Path;
 
@@ -13,6 +14,8 @@ use tokio::runtime::Runtime;
 pub enum ZcashError {
     #[error("RPC Error: {0}")]
     RPC(String),
+    #[error("PubKey must be 33 bytes long: {0}")]
+    InvalidPubkeyLength(String),
 }
 
 pub struct Height {
@@ -35,6 +38,7 @@ fn init() -> Context {
 }
 
 use crate::chain::get_latest_height;
+use crate::addr::get_vault_address;
 
 uniffi::include_scaffolding!("interface");
 
@@ -42,7 +46,18 @@ uniffi::include_scaffolding!("interface");
 macro_rules! uniffi_export {
     ($config:ident, $block:block) => {
         {
-            let context = CONTEXT.lock();
+            let context = crate::CONTEXT.lock();
+            let $config = &context.config;
+            $block
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! uniffi_async_export {
+    ($config:ident, $block:block) => {
+        {
+            let context = crate::CONTEXT.lock();
             let $config = &context.config;
             context.runtime.block_on(async {
                 let res = $block;
