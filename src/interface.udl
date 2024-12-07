@@ -12,6 +12,14 @@ dictionary Height {
     bytes hash;
 };
 
+dictionary UTXO {
+    string txid;
+    u32 height;
+    u32 vout;
+    string script;
+    u64 value;
+};
+
 namespace maya_zcash {
     void init_logger();
 
@@ -29,4 +37,7 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     u64 get_balance(string address);
+
+    [Throws=ZcashError]
+    sequence<UTXO> list_utxos(string address);
 };

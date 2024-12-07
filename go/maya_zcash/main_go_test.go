@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+func TestMain(t *testing.M) {
+    InitLogger();
+    t.Run();
+}
+
 func TestLatestHeight(t *testing.T) {
     height, err := GetLatestHeight()
     if height.Number < 1000 {
@@ -61,3 +66,15 @@ func TestBalance(t *testing.T) {
     }
 }
 
+func TestListUTXO(t *testing.T) {
+    utxos, err := ListUtxos("t1bJEhVLJQqCNKtSgkPs2eYSbtNtmB6hRJZ")
+    if err != nil {
+        t.Errorf(`TestListUTXO = %v`, err)
+    }
+    if len(utxos) == 0 {
+        t.Errorf("Must have at least one UTXO")
+    }
+    if utxos[0].Value != 126514 {
+        t.Errorf("UTXO value does not match")
+    }
+}

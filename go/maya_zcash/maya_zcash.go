@@ -380,6 +380,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_list_utxos(uniffiStatus)
+		})
+		if checksum != 39673 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_list_utxos: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver(uniffiStatus)
 		})
 		if checksum != 55511 {
@@ -611,6 +620,58 @@ func (_ FfiDestroyerTypeHeight) Destroy(value Height) {
 	value.Destroy()
 }
 
+type Utxo struct {
+	Txid   string
+	Height uint32
+	Vout   uint32
+	Script string
+	Value  uint64
+}
+
+func (r *Utxo) Destroy() {
+	FfiDestroyerString{}.Destroy(r.Txid)
+	FfiDestroyerUint32{}.Destroy(r.Height)
+	FfiDestroyerUint32{}.Destroy(r.Vout)
+	FfiDestroyerString{}.Destroy(r.Script)
+	FfiDestroyerUint64{}.Destroy(r.Value)
+}
+
+type FfiConverterTypeUTXO struct{}
+
+var FfiConverterTypeUTXOINSTANCE = FfiConverterTypeUTXO{}
+
+func (c FfiConverterTypeUTXO) Lift(rb RustBufferI) Utxo {
+	return LiftFromRustBuffer[Utxo](c, rb)
+}
+
+func (c FfiConverterTypeUTXO) Read(reader io.Reader) Utxo {
+	return Utxo{
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterUint32INSTANCE.Read(reader),
+		FfiConverterUint32INSTANCE.Read(reader),
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterUint64INSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeUTXO) Lower(value Utxo) RustBuffer {
+	return LowerIntoRustBuffer[Utxo](c, value)
+}
+
+func (c FfiConverterTypeUTXO) Write(writer io.Writer, value Utxo) {
+	FfiConverterStringINSTANCE.Write(writer, value.Txid)
+	FfiConverterUint32INSTANCE.Write(writer, value.Height)
+	FfiConverterUint32INSTANCE.Write(writer, value.Vout)
+	FfiConverterStringINSTANCE.Write(writer, value.Script)
+	FfiConverterUint64INSTANCE.Write(writer, value.Value)
+}
+
+type FfiDestroyerTypeUtxo struct{}
+
+func (_ FfiDestroyerTypeUtxo) Destroy(value Utxo) {
+	value.Destroy()
+}
+
 type ZcashError struct {
 	err error
 }
@@ -772,6 +833,49 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 	}
 }
 
+type FfiConverterSequenceTypeUTXO struct{}
+
+var FfiConverterSequenceTypeUTXOINSTANCE = FfiConverterSequenceTypeUTXO{}
+
+func (c FfiConverterSequenceTypeUTXO) Lift(rb RustBufferI) []Utxo {
+	return LiftFromRustBuffer[[]Utxo](c, rb)
+}
+
+func (c FfiConverterSequenceTypeUTXO) Read(reader io.Reader) []Utxo {
+	length := readInt32(reader)
+	if length == 0 {
+		return nil
+	}
+	result := make([]Utxo, 0, length)
+	for i := int32(0); i < length; i++ {
+		result = append(result, FfiConverterTypeUTXOINSTANCE.Read(reader))
+	}
+	return result
+}
+
+func (c FfiConverterSequenceTypeUTXO) Lower(value []Utxo) RustBuffer {
+	return LowerIntoRustBuffer[[]Utxo](c, value)
+}
+
+func (c FfiConverterSequenceTypeUTXO) Write(writer io.Writer, value []Utxo) {
+	if len(value) > math.MaxInt32 {
+		panic("[]Utxo is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(value)))
+	for _, item := range value {
+		FfiConverterTypeUTXOINSTANCE.Write(writer, item)
+	}
+}
+
+type FfiDestroyerSequenceTypeUtxo struct{}
+
+func (FfiDestroyerSequenceTypeUtxo) Destroy(sequence []Utxo) {
+	for _, value := range sequence {
+		FfiDestroyerTypeUtxo{}.Destroy(value)
+	}
+}
+
 func GetBalance(address string) (uint64, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) C.uint64_t {
 		return C.uniffi_maya_zcash_fn_func_get_balance(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
@@ -813,6 +917,18 @@ func InitLogger() {
 		C.uniffi_maya_zcash_fn_func_init_logger(_uniffiStatus)
 		return false
 	})
+}
+
+func ListUtxos(address string) ([]Utxo, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_list_utxos(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue []Utxo
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterSequenceTypeUTXOINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
 }
 
 func MatchWithBlockchainReceiver(address string, receiver string) (bool, error) {

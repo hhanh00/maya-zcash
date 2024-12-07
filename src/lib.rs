@@ -56,7 +56,7 @@ pub fn init_logger() {
 
 use crate::chain::get_latest_height;
 use crate::addr::{get_vault_address, validate_address, match_with_blockchain_receiver};
-use crate::wallet::get_balance;
+use crate::wallet::{get_balance, list_utxos, UTXO};
 
 uniffi::include_scaffolding!("interface");
 
