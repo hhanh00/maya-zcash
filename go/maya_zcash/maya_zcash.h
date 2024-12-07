@@ -97,6 +97,11 @@ int8_t uniffi_maya_zcash_fn_func_match_with_blockchain_receiver(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_maya_zcash_fn_func_scan_mempool(
+	RustBuffer pubkey,
+	RustCallStatus* out_status
+);
+
 int8_t uniffi_maya_zcash_fn_func_validate_address(
 	RustBuffer address,
 	RustCallStatus* out_status
@@ -422,6 +427,10 @@ uint16_t uniffi_maya_zcash_checksum_func_list_utxos(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_scan_mempool(
 	RustCallStatus* out_status
 );
 

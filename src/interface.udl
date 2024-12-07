@@ -20,6 +20,21 @@ dictionary UTXO {
     u64 value;
 };
 
+dictionary Note {
+    string address;
+    i64 value;
+    string? memo;
+};
+
+dictionary TxData {
+    string txid;
+    u32 height;
+    Note counterparty;
+    sequence<Note> plain;
+    i64 encrypted;
+    u64 fee;
+};
+
 namespace maya_zcash {
     void init_logger();
 
@@ -40,4 +55,7 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     sequence<UTXO> list_utxos(string address);
+
+    [Throws=ZcashError]
+    sequence<TxData> scan_mempool(bytes pubkey);
 };
