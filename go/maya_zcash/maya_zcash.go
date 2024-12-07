@@ -344,6 +344,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_get_balance(uniffiStatus)
+		})
+		if checksum != 16973 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_balance: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_get_latest_height(uniffiStatus)
 		})
 		if checksum != 41262 {
@@ -412,6 +421,30 @@ func (FfiConverterUint32) Read(reader io.Reader) uint32 {
 type FfiDestroyerUint32 struct{}
 
 func (FfiDestroyerUint32) Destroy(_ uint32) {}
+
+type FfiConverterUint64 struct{}
+
+var FfiConverterUint64INSTANCE = FfiConverterUint64{}
+
+func (FfiConverterUint64) Lower(value uint64) C.uint64_t {
+	return C.uint64_t(value)
+}
+
+func (FfiConverterUint64) Write(writer io.Writer, value uint64) {
+	writeUint64(writer, value)
+}
+
+func (FfiConverterUint64) Lift(value C.uint64_t) uint64 {
+	return uint64(value)
+}
+
+func (FfiConverterUint64) Read(reader io.Reader) uint64 {
+	return readUint64(reader)
+}
+
+type FfiDestroyerUint64 struct{}
+
+func (FfiDestroyerUint64) Destroy(_ uint64) {}
 
 type FfiConverterBool struct{}
 
@@ -736,6 +769,18 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeZcashError.Write", value))
+	}
+}
+
+func GetBalance(address string) (uint64, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) C.uint64_t {
+		return C.uniffi_maya_zcash_fn_func_get_balance(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue uint64
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterUint64INSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

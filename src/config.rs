@@ -1,7 +1,7 @@
 use anyhow::Result;
 use figment::{providers::{Format as _, Yaml}, Figment};
 use tokio::runtime::Runtime;
-use zcash_protocol::consensus::{MainNetwork, Network};
+use zcash_protocol::consensus::Network;
 use std::{fs::File, io::Read, path::Path};
 
 use serde::Deserialize;

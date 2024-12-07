@@ -2,6 +2,7 @@ pub mod config;
 pub mod rpc;
 pub mod chain;
 pub mod addr;
+pub mod wallet;
 
 use std::path::Path;
 
@@ -55,6 +56,7 @@ pub fn init_logger() {
 
 use crate::chain::get_latest_height;
 use crate::addr::{get_vault_address, validate_address, match_with_blockchain_receiver};
+use crate::wallet::get_balance;
 
 uniffi::include_scaffolding!("interface");
 
@@ -76,8 +78,7 @@ macro_rules! uniffi_async_export {
             let context = crate::CONTEXT.lock();
             let $config = &context.config;
             context.runtime.block_on(async {
-                let res = $block;
-                Ok::<_, ZcashError>(res)
+                $block
             })
         }
     };

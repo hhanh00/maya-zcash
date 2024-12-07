@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::Config;
+use crate::{config::Config, ZcashError};
 
 #[derive(Serialize)]
 pub struct RpcRequest<'a> {
@@ -47,3 +47,7 @@ pub async fn json_request<'a>(config: &Config, id: &'a str, method: &'a str, par
     } 
     Ok(rpc_response.result)
 }
+
+pub fn map_rpc_error(e: anyhow::Error) -> ZcashError {
+    ZcashError::RPC(e.to_string())
+} 

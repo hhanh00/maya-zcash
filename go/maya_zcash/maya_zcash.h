@@ -68,6 +68,11 @@ int8_t uniffiForeignExecutorCallbackmaya_zcash(uint64_t, uint32_t, RustTaskCallb
 
 void uniffiFutureContinuationCallbackmaya_zcash(void*, int8_t);
 
+uint64_t uniffi_maya_zcash_fn_func_get_balance(
+	RustBuffer address,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_maya_zcash_fn_func_get_latest_height(
 	RustCallStatus* out_status
 );
@@ -388,6 +393,10 @@ void ffi_maya_zcash_rust_future_free_void(
 
 void ffi_maya_zcash_rust_future_complete_void(
 	void* handle,
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_get_balance(
 	RustCallStatus* out_status
 );
 

@@ -31,4 +31,7 @@ func main() {
     // TODO Add more test cases
     valid, _ = maya_zcash.MatchWithBlockchainReceiver("t1ev8Fuh8t1bqheZZa7974j5jwKCjVcP7Pq", "t1ev8Fuh8t1bqheZZa7974j5jwKCjVcP7Pq")
     fmt.Println(valid)
+
+    balance, _ := maya_zcash.GetBalance("t1RyCw14wRXrh3mp21uxgr9ynjem7cNUkMH")
+    fmt.Println(balance)
 }

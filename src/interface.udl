@@ -26,4 +26,7 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     boolean match_with_blockchain_receiver(string address, string receiver);
+
+    [Throws=ZcashError]
+    u64 get_balance(string address);
 };
