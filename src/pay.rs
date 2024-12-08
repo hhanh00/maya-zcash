@@ -57,44 +57,8 @@ pub fn send_to_vault(
                 anyhow!("Memo too long: {memo}").to_string(),
             ));
         }
-
         let utxos = crate::wallet::list_utxos_async(config, from.clone()).await?;
-        let num_touts: u64 = 2 + {
-            if memo.is_empty() {
-                0
-            } else {
-                let len = memo.len() + 2; // size in bytes of the OP_RETURN output
-                ((len + 33) / 34) as u64 // 34 is the size of a PKH output
-            }
-        }; // vault + change
-        let mut num_tins: u64 = 0;
-        let fee = |num_tins, num_touts| max(num_tins, num_touts) * BASE_FEE;
-        let mut current_fee = 0;
-
-        let mut needed = amount;
-        let mut inputs = vec![];
-        let mut input_amount = 0;
-
-        for utxo in utxos {
-            let new_fee = fee(num_tins, num_touts);
-            needed += new_fee - current_fee;
-            current_fee = new_fee;
-
-            let available = min(utxo.value, needed);
-            needed -= available;
-            input_amount += utxo.value;
-            num_tins += 1;
-            inputs.push(utxo);
-
-            if needed == 0 {
-                break;
-            }
-        }
-        if needed > 0 {
-            return Err(ZcashError::NotEnoughFunds);
-        }
-        let f = fee(num_tins, num_touts);
-        let change = input_amount - amount - f;
+        let (inputs, change, _) = select_utxos(&utxos, amount, &memo)?;
 
         let txb = pay_with_utxos(
             config,
@@ -109,6 +73,131 @@ pub fn send_to_vault(
         );
         Ok::<_, ZcashError>(txb)
     })?
+}
+
+fn select_utxos(
+    utxos: &[UTXO],
+    amount: u64,
+    memo: &str,
+) -> Result<(Vec<UTXO>, u64, u64), ZcashError> {
+    let num_touts: u64 = 2 + {
+        if memo.is_empty() {
+            0
+        } else {
+            let len = memo.len() + 2; // size in bytes of the OP_RETURN output
+            ((len + 33) / 34) as u64 // 34 is the size of a PKH output
+        }
+    }; // vault + change
+    let mut num_tins: u64 = 0;
+    let fee = |num_tins, num_touts| max(num_tins, num_touts) * BASE_FEE;
+    let mut current_fee = 0;
+
+    let mut needed = amount;
+    let mut inputs = vec![];
+    let mut input_amount = 0;
+
+    for utxo in utxos {
+        let new_fee = fee(num_tins, num_touts);
+        needed += new_fee - current_fee;
+        current_fee = new_fee;
+
+        let available = min(utxo.value, needed);
+        needed -= available;
+        input_amount += utxo.value;
+        num_tins += 1;
+        inputs.push(utxo.clone());
+
+        if needed == 0 {
+            break;
+        }
+    }
+    if needed > 0 {
+        return Err(ZcashError::NotEnoughFunds);
+    }
+    let f = fee(num_tins, num_touts);
+    let change = input_amount - amount - f;
+
+    Ok((inputs, change, f))
+}
+
+pub struct Output {
+    pub address: String,
+    pub amount: u64,
+    pub memo: String,
+}
+
+pub struct PartialTx {
+    pub height: u32,
+    pub inputs: Vec<UTXO>,
+    pub outputs: Vec<Output>,
+    pub fee: u64,
+}
+
+pub fn pay_from_vault(
+    height: u32,
+    vault: Vec<u8>,
+    to: String,
+    amount: u64,
+    memo: String,
+) -> Result<PartialTx, ZcashError> {
+    uniffi_async_export!(config, {
+        let from = get_vault_address(vault)?;
+        let utxos = crate::wallet::list_utxos_async(config, from.clone()).await?;
+        let (inputs, change, fee) = select_utxos(&utxos, amount, &memo)?;
+        let mut outputs = vec![];
+        outputs.push(Output {
+            address: to,
+            amount,
+            memo,
+        });
+        outputs.push(Output {
+            address: from,
+            amount: change,
+            memo: String::new(),
+        });
+        let partial_tx = PartialTx {
+            height,
+            inputs,
+            outputs,
+            fee,
+        };
+
+        Ok::<_, ZcashError>(partial_tx)
+    })
+}
+
+pub fn combine_vault(height: u32, vault: Vec<u8>) -> Result<PartialTx, ZcashError> {
+    uniffi_async_export!(config, {
+        let from = get_vault_address(vault.clone())?;
+        let utxos = crate::wallet::list_utxos_async(config, from.clone()).await?;
+        combine_vault_utxos_async(height, vault, utxos).await
+    })
+}
+
+pub fn combine_vault_utxos(height: u32, vault: Vec<u8>, utxos: Vec<UTXO>) -> Result<PartialTx, ZcashError> {
+    uniffi_async_export!(_config, {
+        combine_vault_utxos_async(height, vault, utxos).await
+    })
+}
+
+async fn combine_vault_utxos_async(height: u32, vault: Vec<u8>, utxos: Vec<UTXO>) -> Result<PartialTx, ZcashError> {
+let from = get_vault_address(vault)?;
+        let total = utxos.iter().map(|utxo| utxo.value).sum::<u64>();
+        let fee = utxos.len() as u64 * BASE_FEE;
+        let amount = total - fee;
+        let outputs = vec![Output {
+            address: from,
+            amount,
+            memo: String::new(),
+        }];
+        let ptx = PartialTx {
+            height,
+            inputs: utxos,
+            outputs,
+            fee,
+        };
+
+        Ok::<_, ZcashError>(ptx)
 }
 
 fn pay_with_utxos(

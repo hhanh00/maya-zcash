@@ -353,6 +353,24 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_combine_vault(uniffiStatus)
+		})
+		if checksum != 25110 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_combine_vault: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_combine_vault_utxos(uniffiStatus)
+		})
+		if checksum != 39573 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_combine_vault_utxos: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_get_balance(uniffiStatus)
 		})
 		if checksum != 16973 {
@@ -412,6 +430,15 @@ func uniffiCheckChecksums() {
 		if checksum != 55511 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_pay_from_vault(uniffiStatus)
+		})
+		if checksum != 56589 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_pay_from_vault: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -730,6 +757,98 @@ func (c FfiConverterTypeNote) Write(writer io.Writer, value Note) {
 type FfiDestroyerTypeNote struct{}
 
 func (_ FfiDestroyerTypeNote) Destroy(value Note) {
+	value.Destroy()
+}
+
+type Output struct {
+	Address string
+	Amount  uint64
+	Memo    string
+}
+
+func (r *Output) Destroy() {
+	FfiDestroyerString{}.Destroy(r.Address)
+	FfiDestroyerUint64{}.Destroy(r.Amount)
+	FfiDestroyerString{}.Destroy(r.Memo)
+}
+
+type FfiConverterTypeOutput struct{}
+
+var FfiConverterTypeOutputINSTANCE = FfiConverterTypeOutput{}
+
+func (c FfiConverterTypeOutput) Lift(rb RustBufferI) Output {
+	return LiftFromRustBuffer[Output](c, rb)
+}
+
+func (c FfiConverterTypeOutput) Read(reader io.Reader) Output {
+	return Output{
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterUint64INSTANCE.Read(reader),
+		FfiConverterStringINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeOutput) Lower(value Output) RustBuffer {
+	return LowerIntoRustBuffer[Output](c, value)
+}
+
+func (c FfiConverterTypeOutput) Write(writer io.Writer, value Output) {
+	FfiConverterStringINSTANCE.Write(writer, value.Address)
+	FfiConverterUint64INSTANCE.Write(writer, value.Amount)
+	FfiConverterStringINSTANCE.Write(writer, value.Memo)
+}
+
+type FfiDestroyerTypeOutput struct{}
+
+func (_ FfiDestroyerTypeOutput) Destroy(value Output) {
+	value.Destroy()
+}
+
+type PartialTx struct {
+	Height  uint32
+	Inputs  []Utxo
+	Outputs []Output
+	Fee     uint64
+}
+
+func (r *PartialTx) Destroy() {
+	FfiDestroyerUint32{}.Destroy(r.Height)
+	FfiDestroyerSequenceTypeUtxo{}.Destroy(r.Inputs)
+	FfiDestroyerSequenceTypeOutput{}.Destroy(r.Outputs)
+	FfiDestroyerUint64{}.Destroy(r.Fee)
+}
+
+type FfiConverterTypePartialTx struct{}
+
+var FfiConverterTypePartialTxINSTANCE = FfiConverterTypePartialTx{}
+
+func (c FfiConverterTypePartialTx) Lift(rb RustBufferI) PartialTx {
+	return LiftFromRustBuffer[PartialTx](c, rb)
+}
+
+func (c FfiConverterTypePartialTx) Read(reader io.Reader) PartialTx {
+	return PartialTx{
+		FfiConverterUint32INSTANCE.Read(reader),
+		FfiConverterSequenceTypeUTXOINSTANCE.Read(reader),
+		FfiConverterSequenceTypeOutputINSTANCE.Read(reader),
+		FfiConverterUint64INSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypePartialTx) Lower(value PartialTx) RustBuffer {
+	return LowerIntoRustBuffer[PartialTx](c, value)
+}
+
+func (c FfiConverterTypePartialTx) Write(writer io.Writer, value PartialTx) {
+	FfiConverterUint32INSTANCE.Write(writer, value.Height)
+	FfiConverterSequenceTypeUTXOINSTANCE.Write(writer, value.Inputs)
+	FfiConverterSequenceTypeOutputINSTANCE.Write(writer, value.Outputs)
+	FfiConverterUint64INSTANCE.Write(writer, value.Fee)
+}
+
+type FfiDestroyerTypePartialTx struct{}
+
+func (_ FfiDestroyerTypePartialTx) Destroy(value PartialTx) {
 	value.Destroy()
 }
 
@@ -1212,6 +1331,49 @@ func (FfiDestroyerSequenceTypeNote) Destroy(sequence []Note) {
 	}
 }
 
+type FfiConverterSequenceTypeOutput struct{}
+
+var FfiConverterSequenceTypeOutputINSTANCE = FfiConverterSequenceTypeOutput{}
+
+func (c FfiConverterSequenceTypeOutput) Lift(rb RustBufferI) []Output {
+	return LiftFromRustBuffer[[]Output](c, rb)
+}
+
+func (c FfiConverterSequenceTypeOutput) Read(reader io.Reader) []Output {
+	length := readInt32(reader)
+	if length == 0 {
+		return nil
+	}
+	result := make([]Output, 0, length)
+	for i := int32(0); i < length; i++ {
+		result = append(result, FfiConverterTypeOutputINSTANCE.Read(reader))
+	}
+	return result
+}
+
+func (c FfiConverterSequenceTypeOutput) Lower(value []Output) RustBuffer {
+	return LowerIntoRustBuffer[[]Output](c, value)
+}
+
+func (c FfiConverterSequenceTypeOutput) Write(writer io.Writer, value []Output) {
+	if len(value) > math.MaxInt32 {
+		panic("[]Output is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(value)))
+	for _, item := range value {
+		FfiConverterTypeOutputINSTANCE.Write(writer, item)
+	}
+}
+
+type FfiDestroyerSequenceTypeOutput struct{}
+
+func (FfiDestroyerSequenceTypeOutput) Destroy(sequence []Output) {
+	for _, value := range sequence {
+		FfiDestroyerTypeOutput{}.Destroy(value)
+	}
+}
+
 type FfiConverterSequenceTypeTxData struct{}
 
 var FfiConverterSequenceTypeTxDataINSTANCE = FfiConverterSequenceTypeTxData{}
@@ -1310,6 +1472,30 @@ func BroadcastRawTx(tx []byte) (string, error) {
 	}
 }
 
+func CombineVault(height uint32, vault []byte) (PartialTx, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_combine_vault(FfiConverterUint32INSTANCE.Lower(height), FfiConverterBytesINSTANCE.Lower(vault), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue PartialTx
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypePartialTxINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func CombineVaultUtxos(height uint32, vault []byte, utxos []Utxo) (PartialTx, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_combine_vault_utxos(FfiConverterUint32INSTANCE.Lower(height), FfiConverterBytesINSTANCE.Lower(vault), FfiConverterSequenceTypeUTXOINSTANCE.Lower(utxos), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue PartialTx
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypePartialTxINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
 func GetBalance(address string) (uint64, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) C.uint64_t {
 		return C.uniffi_maya_zcash_fn_func_get_balance(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
@@ -1386,6 +1572,18 @@ func MatchWithBlockchainReceiver(address string, receiver string) (bool, error) 
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterBoolINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func PayFromVault(height uint32, vault []byte, to string, amount uint64, memo string) (PartialTx, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_pay_from_vault(FfiConverterUint32INSTANCE.Lower(height), FfiConverterBytesINSTANCE.Lower(vault), FfiConverterStringINSTANCE.Lower(to), FfiConverterUint64INSTANCE.Lower(amount), FfiConverterStringINSTANCE.Lower(memo), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue PartialTx
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypePartialTxINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

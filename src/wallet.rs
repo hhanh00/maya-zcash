@@ -26,7 +26,7 @@ pub fn get_balance(address: String) -> Result<u64, ZcashError> {
     })
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct UTXO {
     pub txid: String,
     pub height: u32,

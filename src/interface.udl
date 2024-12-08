@@ -48,6 +48,19 @@ dictionary TxBytes {
     bytes data;
 };
 
+dictionary Output {
+    string address;
+    u64 amount;
+    string memo;
+};
+
+dictionary PartialTx {
+    u32 height;
+    sequence<UTXO> inputs;
+    sequence<Output> outputs;
+    u64 fee;
+};
+
 namespace maya_zcash {
     void init_logger();
 
@@ -90,4 +103,23 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     TransparentKey sk_to_pub(string wif);
+
+    [Throws=ZcashError]
+    PartialTx pay_from_vault(
+        u32 height,
+        bytes vault,
+        string to,
+        u64 amount,
+        string memo);
+
+    [Throws=ZcashError]
+    PartialTx combine_vault(
+        u32 height, 
+        bytes vault);
+
+    [Throws=ZcashError]
+    PartialTx combine_vault_utxos(
+        u32 height, 
+        bytes vault,
+        sequence<UTXO> utxos);
 };

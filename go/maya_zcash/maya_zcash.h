@@ -73,6 +73,19 @@ RustBuffer uniffi_maya_zcash_fn_func_broadcast_raw_tx(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_maya_zcash_fn_func_combine_vault(
+	uint32_t height,
+	RustBuffer vault,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_maya_zcash_fn_func_combine_vault_utxos(
+	uint32_t height,
+	RustBuffer vault,
+	RustBuffer utxos,
+	RustCallStatus* out_status
+);
+
 uint64_t uniffi_maya_zcash_fn_func_get_balance(
 	RustBuffer address,
 	RustCallStatus* out_status
@@ -104,6 +117,15 @@ RustBuffer uniffi_maya_zcash_fn_func_list_utxos(
 int8_t uniffi_maya_zcash_fn_func_match_with_blockchain_receiver(
 	RustBuffer address,
 	RustBuffer receiver,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_maya_zcash_fn_func_pay_from_vault(
+	uint32_t height,
+	RustBuffer vault,
+	RustBuffer to,
+	uint64_t amount,
+	RustBuffer memo,
 	RustCallStatus* out_status
 );
 
@@ -435,6 +457,14 @@ uint16_t uniffi_maya_zcash_checksum_func_broadcast_raw_tx(
 	RustCallStatus* out_status
 );
 
+uint16_t uniffi_maya_zcash_checksum_func_combine_vault(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_combine_vault_utxos(
+	RustCallStatus* out_status
+);
+
 uint16_t uniffi_maya_zcash_checksum_func_get_balance(
 	RustCallStatus* out_status
 );
@@ -460,6 +490,10 @@ uint16_t uniffi_maya_zcash_checksum_func_list_utxos(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_pay_from_vault(
 	RustCallStatus* out_status
 );
 

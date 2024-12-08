@@ -102,14 +102,44 @@ func TestSKToPub(t *testing.T) {
 func TestSendToVault(t *testing.T) {
     sk, _ := hex.DecodeString("8ae9c0c958937eeec71e034650e889085c10e91ae1ab94a26c26182f9516a37f")
     vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
-    tx, err := SendToVault(200, sk, "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", vault, 10000000, "MEMO")
+    _, err := SendToVault(200, sk, "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", vault, 10000000, "MEMO")
     if err != nil {
         t.Errorf(`TestSendToVault = %v`, err)
     }
-    txb := tx.Data
+}
+
+func TestBroadcast(t *testing.T) {
+    // Skip this test because hardcoding a raw tx does not work
+    t.SkipNow()
+
+    txb, _ := hex.DecodeString("050000800a27a7265510e7c800000000f00000000186b1a9c7f46c7550e48fa0781495ef891ed81b48506ef53a28c3e83a223f6482000000006a473044022014e4bc7f7ab7034fe1992ee128484e72864e7d08380b2e663b43c2d490aa26190220643a69a289195a62f9c85c208a27d417f847fd1ea94af086cce435ce6eb9f89f012103243597856d5bd7c8f91f77446a53db425ce10d237c1d6928f2268acdc538797effffffff030000000000000000066a044d454d4f80969800000000001976a914e6d4b9d2c408bf6bd44523b3b6607de4853b806088ace83c8e06000000001976a914936667ff8d2d41361a4df4a370b309fb15380eac88ac0000002024")
     txid, err := BroadcastRawTx(txb)
     if err != nil {
         t.Errorf(`TestSendToVault = %v`, err)
     }
-    fmt.Printf("txid: %v\n", txid)
+    if txid != "d120e67dac6ccdb49915542544ae2673fd4aef6adc1fa4eac9012134c9f3ddd0" {
+        t.Errorf(`txid mismatch = %s`, txid)
+    }
+}
+
+func TestPayFromVault(t *testing.T) {
+    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    ptx, err := PayFromVault(200, vault, "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", 500000, "MEMO OUT")
+    if err != nil {
+        t.Errorf(`TestPayFromVault = %v`, err)
+    }
+    if ptx.Fee != 15000 {
+        t.Errorf(`Unexpected fee %d`, ptx.Fee)
+    }
+}
+
+func TestCombineVault(t *testing.T) {
+    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    ptx, err := CombineVault(200, vault)
+    if err != nil {
+        t.Errorf(`TestCombineVault = %v`, err)
+    }
+    if ptx.Outputs[0].Amount != 539995000 {
+        t.Errorf(`Unexpected amount %d`, ptx.Outputs[0].Amount)
+    }
 }
