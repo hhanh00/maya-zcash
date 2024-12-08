@@ -16,3 +16,7 @@ sleep 5
 ./src/zcash-cli --datadir=regtest z_getoperationresult
 ./src/zcash-cli --datadir=regtest generate 10
 sleep 1
+./src/zcash-cli --datadir=regtest z_sendmany $UA '[{"address": "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", "amount": 1.20}]' 1 null 'AllowRevealedRecipients'
+sleep 5
+./src/zcash-cli --datadir=regtest z_getoperationresult
+./src/zcash-cli --datadir=regtest generate 10

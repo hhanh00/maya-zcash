@@ -15,7 +15,6 @@ name = "maya_zcash"
 [dependencies]
 anyhow = "1.0.94"
 env_logger = "0.11.5"
-figment = {version = "0.10.19", features = ["yaml"]}
 hex = "0.4.3"
 lazy_static = "1.5.0"
 log = "0.4.22"
@@ -34,15 +33,20 @@ uuid = {version = "1.11.0", features = ["v4"]}
 
 ripemd = "0.1.1"
 sha2 = "0.10.2"
+blake2b_simd = "1.0.2"
+secp256k1 = "0.27.0"
+base58check = "0.1.0"
+rand_core = "0.6.4"
 
-zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "be5fa0c7", features = ["sapling", "orchard", "test-dependencies"] }
-zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "be5fa0c7", features = ["local-consensus"] }
-zcash_client_backend = { git = "https://github.com/hhanh00/librustzcash.git", rev = "be5fa0c7", features = [ "transparent-inputs", "orchard" ] }
-zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "be5fa0c7", features = [ "transparent-inputs" ] }
-zcash_proofs = { git = "https://github.com/hhanh00/librustzcash.git", rev = "be5fa0c7" }
-zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "be5fa0c7" }
-zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git",  rev = "be5fa0c7" }
+zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd", features = ["sapling", "orchard", "test-dependencies"] }
+zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd", features = ["local-consensus"] }
+zcash_client_backend = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd", features = [ "transparent-inputs", "orchard" ] }
+zcash_primitives = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd", features = [ "transparent-inputs" ] }
+zcash_proofs = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd" }
+zcash_address = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd" }
+zcash_encoding = { git = "https://github.com/hhanh00/librustzcash.git",  rev = "029c3ddd" }
 zcash_note_encryption = "0.4"
+subst = { version = "0.3.5", features = ["yaml"] }
 
 [build-dependencies]
 uniffi = {version = "0.25", features = ["build"]}

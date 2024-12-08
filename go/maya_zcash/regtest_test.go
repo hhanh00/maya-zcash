@@ -89,3 +89,27 @@ func TestScanMempool(t *testing.T) {
         t.Errorf(`TestScanMempool = %v`, err)
     }
 }
+
+func TestSKToPub(t *testing.T) {
+    k, err := SkToPub("L1sjrupHTXwtX847jZhXpkACVYE6d4edPeJK9762j7AeCYL4c32z")
+    if err != nil {
+        t.Errorf(`TestSKToPub = %v`, err)
+    }
+    sk := hex.EncodeToString(k.Sk)
+    fmt.Printf("sk: %s k: %v\n", sk, k)
+}
+
+func TestSendToVault(t *testing.T) {
+    sk, _ := hex.DecodeString("8ae9c0c958937eeec71e034650e889085c10e91ae1ab94a26c26182f9516a37f")
+    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    tx, err := SendToVault(200, sk, "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", vault, 10000000, "MEMO")
+    if err != nil {
+        t.Errorf(`TestSendToVault = %v`, err)
+    }
+    txb := tx.Data
+    txid, err := BroadcastRawTx(txb)
+    if err != nil {
+        t.Errorf(`TestSendToVault = %v`, err)
+    }
+    fmt.Printf("txid: %v\n", txid)
+}

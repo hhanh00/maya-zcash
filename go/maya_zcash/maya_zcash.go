@@ -344,6 +344,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_broadcast_raw_tx(uniffiStatus)
+		})
+		if checksum != 14042 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_broadcast_raw_tx: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_get_balance(uniffiStatus)
 		})
 		if checksum != 16973 {
@@ -358,6 +367,15 @@ func uniffiCheckChecksums() {
 		if checksum != 41262 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_latest_height: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_get_ovk(uniffiStatus)
+		})
+		if checksum != 17238 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_get_ovk: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -403,6 +421,24 @@ func uniffiCheckChecksums() {
 		if checksum != 23225 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_scan_mempool: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_send_to_vault(uniffiStatus)
+		})
+		if checksum != 12684 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_send_to_vault: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_sk_to_pub(uniffiStatus)
+		})
+		if checksum != 14751 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_sk_to_pub: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -697,6 +733,90 @@ func (_ FfiDestroyerTypeNote) Destroy(value Note) {
 	value.Destroy()
 }
 
+type TransparentKey struct {
+	Sk   []byte
+	Pk   []byte
+	Addr string
+}
+
+func (r *TransparentKey) Destroy() {
+	FfiDestroyerBytes{}.Destroy(r.Sk)
+	FfiDestroyerBytes{}.Destroy(r.Pk)
+	FfiDestroyerString{}.Destroy(r.Addr)
+}
+
+type FfiConverterTypeTransparentKey struct{}
+
+var FfiConverterTypeTransparentKeyINSTANCE = FfiConverterTypeTransparentKey{}
+
+func (c FfiConverterTypeTransparentKey) Lift(rb RustBufferI) TransparentKey {
+	return LiftFromRustBuffer[TransparentKey](c, rb)
+}
+
+func (c FfiConverterTypeTransparentKey) Read(reader io.Reader) TransparentKey {
+	return TransparentKey{
+		FfiConverterBytesINSTANCE.Read(reader),
+		FfiConverterBytesINSTANCE.Read(reader),
+		FfiConverterStringINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeTransparentKey) Lower(value TransparentKey) RustBuffer {
+	return LowerIntoRustBuffer[TransparentKey](c, value)
+}
+
+func (c FfiConverterTypeTransparentKey) Write(writer io.Writer, value TransparentKey) {
+	FfiConverterBytesINSTANCE.Write(writer, value.Sk)
+	FfiConverterBytesINSTANCE.Write(writer, value.Pk)
+	FfiConverterStringINSTANCE.Write(writer, value.Addr)
+}
+
+type FfiDestroyerTypeTransparentKey struct{}
+
+func (_ FfiDestroyerTypeTransparentKey) Destroy(value TransparentKey) {
+	value.Destroy()
+}
+
+type TxBytes struct {
+	Txid string
+	Data []byte
+}
+
+func (r *TxBytes) Destroy() {
+	FfiDestroyerString{}.Destroy(r.Txid)
+	FfiDestroyerBytes{}.Destroy(r.Data)
+}
+
+type FfiConverterTypeTxBytes struct{}
+
+var FfiConverterTypeTxBytesINSTANCE = FfiConverterTypeTxBytes{}
+
+func (c FfiConverterTypeTxBytes) Lift(rb RustBufferI) TxBytes {
+	return LiftFromRustBuffer[TxBytes](c, rb)
+}
+
+func (c FfiConverterTypeTxBytes) Read(reader io.Reader) TxBytes {
+	return TxBytes{
+		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterBytesINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeTxBytes) Lower(value TxBytes) RustBuffer {
+	return LowerIntoRustBuffer[TxBytes](c, value)
+}
+
+func (c FfiConverterTypeTxBytes) Write(writer io.Writer, value TxBytes) {
+	FfiConverterStringINSTANCE.Write(writer, value.Txid)
+	FfiConverterBytesINSTANCE.Write(writer, value.Data)
+}
+
+type FfiDestroyerTypeTxBytes struct{}
+
+func (_ FfiDestroyerTypeTxBytes) Destroy(value TxBytes) {
+	value.Destroy()
+}
+
 type TxData struct {
 	Txid         string
 	Height       uint32
@@ -822,6 +942,8 @@ var ErrZcashErrorRpc = fmt.Errorf("ZcashErrorRpc")
 var ErrZcashErrorInvalidPubkeyLength = fmt.Errorf("ZcashErrorInvalidPubkeyLength")
 var ErrZcashErrorInvalidAddress = fmt.Errorf("ZcashErrorInvalidAddress")
 var ErrZcashErrorNoOrchardReceiver = fmt.Errorf("ZcashErrorNoOrchardReceiver")
+var ErrZcashErrorNotEnoughFunds = fmt.Errorf("ZcashErrorNotEnoughFunds")
+var ErrZcashErrorTxRejected = fmt.Errorf("ZcashErrorTxRejected")
 var ErrZcashErrorAssertError = fmt.Errorf("ZcashErrorAssertError")
 
 // Variant structs
@@ -897,6 +1019,42 @@ func (self ZcashErrorNoOrchardReceiver) Is(target error) bool {
 	return target == ErrZcashErrorNoOrchardReceiver
 }
 
+type ZcashErrorNotEnoughFunds struct {
+	message string
+}
+
+func NewZcashErrorNotEnoughFunds() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorNotEnoughFunds{},
+	}
+}
+
+func (err ZcashErrorNotEnoughFunds) Error() string {
+	return fmt.Sprintf("NotEnoughFunds: %s", err.message)
+}
+
+func (self ZcashErrorNotEnoughFunds) Is(target error) bool {
+	return target == ErrZcashErrorNotEnoughFunds
+}
+
+type ZcashErrorTxRejected struct {
+	message string
+}
+
+func NewZcashErrorTxRejected() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorTxRejected{},
+	}
+}
+
+func (err ZcashErrorTxRejected) Error() string {
+	return fmt.Sprintf("TxRejected: %s", err.message)
+}
+
+func (self ZcashErrorTxRejected) Is(target error) bool {
+	return target == ErrZcashErrorTxRejected
+}
+
 type ZcashErrorAssertError struct {
 	message string
 }
@@ -941,6 +1099,10 @@ func (c FfiConverterTypeZcashError) Read(reader io.Reader) *ZcashError {
 	case 4:
 		return &ZcashError{&ZcashErrorNoOrchardReceiver{message}}
 	case 5:
+		return &ZcashError{&ZcashErrorNotEnoughFunds{message}}
+	case 6:
+		return &ZcashError{&ZcashErrorTxRejected{message}}
+	case 7:
 		return &ZcashError{&ZcashErrorAssertError{message}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeZcashError.Read()", errorID))
@@ -958,8 +1120,12 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 		writeInt32(writer, 3)
 	case *ZcashErrorNoOrchardReceiver:
 		writeInt32(writer, 4)
-	case *ZcashErrorAssertError:
+	case *ZcashErrorNotEnoughFunds:
 		writeInt32(writer, 5)
+	case *ZcashErrorTxRejected:
+		writeInt32(writer, 6)
+	case *ZcashErrorAssertError:
+		writeInt32(writer, 7)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeZcashError.Write", value))
@@ -1132,6 +1298,18 @@ func (FfiDestroyerSequenceTypeUtxo) Destroy(sequence []Utxo) {
 	}
 }
 
+func BroadcastRawTx(tx []byte) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_broadcast_raw_tx(FfiConverterBytesINSTANCE.Lower(tx), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
 func GetBalance(address string) (uint64, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) C.uint64_t {
 		return C.uniffi_maya_zcash_fn_func_get_balance(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
@@ -1153,6 +1331,18 @@ func GetLatestHeight() (Height, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeHeightINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func GetOvk(pubkey []byte) ([]byte, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_get_ovk(FfiConverterBytesINSTANCE.Lower(pubkey), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue []byte
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterBytesINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
@@ -1208,6 +1398,30 @@ func ScanMempool(pubkey []byte) ([]TxData, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterSequenceTypeTxDataINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func SendToVault(expiryHeight uint32, sk []byte, from string, vault []byte, amount uint64, memo string) (TxBytes, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_send_to_vault(FfiConverterUint32INSTANCE.Lower(expiryHeight), FfiConverterBytesINSTANCE.Lower(sk), FfiConverterStringINSTANCE.Lower(from), FfiConverterBytesINSTANCE.Lower(vault), FfiConverterUint64INSTANCE.Lower(amount), FfiConverterStringINSTANCE.Lower(memo), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue TxBytes
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeTxBytesINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func SkToPub(wif string) (TransparentKey, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_sk_to_pub(FfiConverterStringINSTANCE.Lower(wif), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue TransparentKey
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeTransparentKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

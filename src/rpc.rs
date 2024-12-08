@@ -20,7 +20,12 @@ pub struct RpcResponse {
     error: Option<serde_json::Value>,
 }
 
-pub async fn json_request<'a>(config: &Config, id: &'a str, method: &'a str, params: Vec<Value>) -> Result<Value> {
+pub async fn json_request<'a>(
+    config: &Config,
+    id: &'a str,
+    method: &'a str,
+    params: Vec<Value>,
+) -> Result<Value> {
     // Create the JSON-RPC payload
     let req = RpcRequest {
         jsonrpc: "1.0",
@@ -44,10 +49,10 @@ pub async fn json_request<'a>(config: &Config, id: &'a str, method: &'a str, par
     if let Some(error) = rpc_response.error {
         tracing::error!("Error: {:?}", error);
         anyhow::bail!(error["message"].as_str().unwrap().to_string());
-    } 
+    }
     Ok(rpc_response.result)
 }
 
 pub fn map_rpc_error(e: anyhow::Error) -> ZcashError {
     ZcashError::RPC(e.to_string())
-} 
+}

@@ -4,12 +4,20 @@ enum ZcashError {
     "InvalidPubkeyLength",
     "InvalidAddress",
     "NoOrchardReceiver",
+    "NotEnoughFunds",
+    "TxRejected",
     "AssertError",
 };
 
 dictionary Height {
     u32 number;
     bytes hash;
+};
+
+dictionary TransparentKey {
+    bytes sk;
+    bytes pk;
+    string addr;
 };
 
 dictionary UTXO {
@@ -35,6 +43,11 @@ dictionary TxData {
     u64 fee;
 };
 
+dictionary TxBytes {
+    string txid;
+    bytes data;
+};
+
 namespace maya_zcash {
     void init_logger();
 
@@ -43,6 +56,9 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     string get_vault_address(bytes pubkey);
+
+    [Throws=ZcashError]
+    bytes get_ovk(bytes pubkey);
 
     [Throws=ZcashError]
     boolean validate_address(string address);
@@ -58,4 +74,20 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     sequence<TxData> scan_mempool(bytes pubkey);
+
+    [Throws=ZcashError]
+    TxBytes send_to_vault(
+        u32 expiry_height,
+        bytes sk,
+        string from,
+        bytes vault,
+        u64 amount,
+        string memo
+    );
+
+    [Throws=ZcashError]
+    string broadcast_raw_tx(bytes tx);
+
+    [Throws=ZcashError]
+    TransparentKey sk_to_pub(string wif);
 };
