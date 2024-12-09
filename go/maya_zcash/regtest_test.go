@@ -82,14 +82,6 @@ func TestListUTXO(t *testing.T) {
     }
 }
 
-func TestScanMempool(t *testing.T) {
-    bytes, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
-    _, err := ScanMempool(bytes)
-    if err != nil {
-        t.Errorf(`TestScanMempool = %v`, err)
-    }
-}
-
 func TestSKToPub(t *testing.T) {
     // This is the secret key of the vault
     k, err := SkToPub("L1rrP7J2tqVfC5sj5wi8Gn4M2f4kyX1dByHPVHCa6Mzyz8eahu77")
@@ -171,7 +163,10 @@ func TestSignSighash(t *testing.T) {
 func TestApplySignatures(t *testing.T) {
     vault_sk, _ := hex.DecodeString("8a74dce839bc2228428ed5de3c2edbabb5c9713f5e6eeb808f9c56640921c6c9")
     vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
-    ptx, _ := PayFromVault(200, vault, "zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr", 500000, "MEMO OUT")
+    // transpa: tm9j9tS8nTnNQqoJuw8ToinJCapd3WdzGVu
+    // sapling: zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr
+    // orchard: uregtest1w7mhyq5xd5h8zrlqfdnf8kqrd0g8n8q9hg8502e63sr5xuenhyvama2jytdul0k2krj2kq86x86ch8x9eejxh4se8en4jpwdkse7l0gl
+    ptx, _ := PayFromVault(200, vault, "tm9j9tS8nTnNQqoJuw8ToinJCapd3WdzGVu", 500000, "MEMO OUT")
     sighashes, _ := BuildVaultUnauthorizedTx(vault, ptx)
     signatures := make([][]byte, 0)
     for _, sighash := range sighashes.Hashes {
@@ -185,4 +180,16 @@ func TestApplySignatures(t *testing.T) {
     // fmt.Printf("txb: %v\n", hex.EncodeToString(txb))
     txid, _ := BroadcastRawTx(txb)
     fmt.Printf("txid: %s\n", txid)
+}
+
+func TestScanMempool(t *testing.T) {
+    bytes, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
+    txs, err := ScanMempool(bytes)
+    if err != nil {
+        t.Errorf(`TestScanMempool = %v`, err)
+    }
+    if len(txs) == 0 {
+        t.Errorf("Should have at least one tx in the mempool because of the previous test")
+    }
+    fmt.Printf("txs: %v\n", txs)
 }

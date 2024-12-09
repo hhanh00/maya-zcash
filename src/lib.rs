@@ -66,10 +66,10 @@ pub fn init_logger() {
 use crate::addr::{get_ovk, get_vault_address, match_with_blockchain_receiver, validate_address};
 use crate::chain::{broadcast_raw_tx, get_latest_height};
 use crate::pay::{
-    build_vault_unauthorized_tx, combine_vault, combine_vault_utxos, pay_from_vault, send_to_vault,
-    sign_sighash, apply_signatures, Output, PartialTx, Sighashes, TxBytes,
+    apply_signatures, build_vault_unauthorized_tx, combine_vault, combine_vault_utxos,
+    pay_from_vault, send_to_vault, sign_sighash, Output, PartialTx, Sighashes, TxBytes,
 };
-use crate::scan::{scan_mempool, Note, TxData};
+use crate::scan::{scan_mempool, Direction, VaultTx};
 use crate::wallet::{get_balance, list_utxos, sk_to_pub, TransparentKey, UTXO};
 
 uniffi::include_scaffolding!("interface");
@@ -102,6 +102,11 @@ pub fn to_ba<const N: usize>(v: &[u8]) -> Result<[u8; N], ZcashError> {
 pub fn to_hash(s: &str) -> Result<[u8; 32], ZcashError> {
     let mut v = decode_hexstring(s)?;
     v.reverse();
+    to_ba(&v)
+}
+
+pub fn to_uhash(s: &str) -> Result<[u8; 32], ZcashError> {
+    let v = decode_hexstring(s)?;
     to_ba(&v)
 }
 

@@ -28,19 +28,16 @@ dictionary UTXO {
     u64 value;
 };
 
-dictionary Note {
-    string address;
-    i64 value;
-    string? memo;
+enum Direction {
+    "Incoming",
+    "Outgoing",
 };
 
-dictionary TxData {
+dictionary VaultTx {
     string txid;
     u32 height;
-    Note counterparty;
-    sequence<Note> plain;
-    i64 encrypted;
-    u64 fee;
+    Output counterparty;
+    Direction direction;
 };
 
 dictionary TxBytes {
@@ -91,7 +88,7 @@ namespace maya_zcash {
     sequence<UTXO> list_utxos(string address);
 
     [Throws=ZcashError]
-    sequence<TxData> scan_mempool(bytes pubkey);
+    sequence<VaultTx> scan_mempool(bytes pubkey);
 
     [Throws=ZcashError]
     TxBytes send_to_vault(

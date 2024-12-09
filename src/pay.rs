@@ -132,6 +132,7 @@ fn select_utxos(
     Ok((inputs, change, f))
 }
 
+#[derive(Clone, Debug)]
 pub struct Output {
     pub address: String,
     pub amount: u64,
@@ -514,10 +515,17 @@ pub fn sign_sighash(sk: Vec<u8>, sighash: Vec<u8>) -> Result<Vec<u8>, ZcashError
     Ok(sig)
 }
 
-pub fn apply_signatures(vault: Vec<u8>, ptx: PartialTx, signatures: Vec<Vec<u8>>) -> Result<Vec<u8>, ZcashError> {
+pub fn apply_signatures(
+    vault: Vec<u8>,
+    ptx: PartialTx,
+    signatures: Vec<Vec<u8>>,
+) -> Result<Vec<u8>, ZcashError> {
     uniffi_export!(context, {
         let unauthed_tx = build_unauthorized_tx(&context, vault, &ptx)?;
-        let signatures = signatures.iter().map(|s| Signature::from_compact(&s)).collect::<Result<Vec<_>, _>>()
+        let signatures = signatures
+            .iter()
+            .map(|s| Signature::from_compact(&s))
+            .collect::<Result<Vec<_>, _>>()
             .map_err(to_zcasherror(anyhow!("Invalid signature(s)")))?;
         let txid_parts = unauthed_tx.digest(TxIdDigester);
         let txid = signature_hash(&unauthed_tx, &SignableInput::Shielded, &txid_parts)
@@ -526,21 +534,22 @@ pub fn apply_signatures(vault: Vec<u8>, ptx: PartialTx, signatures: Vec<Vec<u8>>
         tracing::info!("txid {}", hex::encode(txid));
 
         let pk = &context.orchard_prover;
-        let tx_data: TransactionData<zcash_primitives::transaction::Authorized> = unauthed_tx.map_bundles(
-            |tb| tb.map(|tb| tb.apply_external_signatures(signatures)),
-            |sb| sb.map(|sb| sb.apply_signatures(OsRng, txid.clone(), &[]).unwrap()),
-            |ob| {
-                ob.map(|ob| {
-                    let ob = ob.create_proof(pk, OsRng).unwrap();
-                    ob.apply_signatures(OsRng, txid.clone(), &[]).unwrap()
-                })
-            },
-        );
+        let tx_data: TransactionData<zcash_primitives::transaction::Authorized> = unauthed_tx
+            .map_bundles(
+                |tb| tb.map(|tb| tb.apply_external_signatures(signatures)),
+                |sb| sb.map(|sb| sb.apply_signatures(OsRng, txid.clone(), &[]).unwrap()),
+                |ob| {
+                    ob.map(|ob| {
+                        let ob = ob.create_proof(pk, OsRng).unwrap();
+                        ob.apply_signatures(OsRng, txid.clone(), &[]).unwrap()
+                    })
+                },
+            );
 
         let tx = tx_data.freeze().unwrap();
         let mut buffer = vec![];
         tx.write(&mut buffer).unwrap();
-    
+
         Ok::<_, ZcashError>(buffer)
     })
 }
