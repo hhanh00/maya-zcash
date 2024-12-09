@@ -353,6 +353,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_build_vault_unauthorized_tx(uniffiStatus)
+		})
+		if checksum != 928 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_build_vault_unauthorized_tx: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_combine_vault(uniffiStatus)
 		})
 		if checksum != 25110 {
@@ -809,6 +818,7 @@ type PartialTx struct {
 	Inputs  []Utxo
 	Outputs []Output
 	Fee     uint64
+	TxSeed  []byte
 }
 
 func (r *PartialTx) Destroy() {
@@ -816,6 +826,7 @@ func (r *PartialTx) Destroy() {
 	FfiDestroyerSequenceTypeUtxo{}.Destroy(r.Inputs)
 	FfiDestroyerSequenceTypeOutput{}.Destroy(r.Outputs)
 	FfiDestroyerUint64{}.Destroy(r.Fee)
+	FfiDestroyerBytes{}.Destroy(r.TxSeed)
 }
 
 type FfiConverterTypePartialTx struct{}
@@ -832,6 +843,7 @@ func (c FfiConverterTypePartialTx) Read(reader io.Reader) PartialTx {
 		FfiConverterSequenceTypeUTXOINSTANCE.Read(reader),
 		FfiConverterSequenceTypeOutputINSTANCE.Read(reader),
 		FfiConverterUint64INSTANCE.Read(reader),
+		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
@@ -844,11 +856,48 @@ func (c FfiConverterTypePartialTx) Write(writer io.Writer, value PartialTx) {
 	FfiConverterSequenceTypeUTXOINSTANCE.Write(writer, value.Inputs)
 	FfiConverterSequenceTypeOutputINSTANCE.Write(writer, value.Outputs)
 	FfiConverterUint64INSTANCE.Write(writer, value.Fee)
+	FfiConverterBytesINSTANCE.Write(writer, value.TxSeed)
 }
 
 type FfiDestroyerTypePartialTx struct{}
 
 func (_ FfiDestroyerTypePartialTx) Destroy(value PartialTx) {
+	value.Destroy()
+}
+
+type Sighashes struct {
+	Hashes [][]byte
+}
+
+func (r *Sighashes) Destroy() {
+	FfiDestroyerSequenceBytes{}.Destroy(r.Hashes)
+}
+
+type FfiConverterTypeSighashes struct{}
+
+var FfiConverterTypeSighashesINSTANCE = FfiConverterTypeSighashes{}
+
+func (c FfiConverterTypeSighashes) Lift(rb RustBufferI) Sighashes {
+	return LiftFromRustBuffer[Sighashes](c, rb)
+}
+
+func (c FfiConverterTypeSighashes) Read(reader io.Reader) Sighashes {
+	return Sighashes{
+		FfiConverterSequenceBytesINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeSighashes) Lower(value Sighashes) RustBuffer {
+	return LowerIntoRustBuffer[Sighashes](c, value)
+}
+
+func (c FfiConverterTypeSighashes) Write(writer io.Writer, value Sighashes) {
+	FfiConverterSequenceBytesINSTANCE.Write(writer, value.Hashes)
+}
+
+type FfiDestroyerTypeSighashes struct{}
+
+func (_ FfiDestroyerTypeSighashes) Destroy(value Sighashes) {
 	value.Destroy()
 }
 
@@ -1058,7 +1107,7 @@ func (err ZcashError) Unwrap() error {
 
 // Err* are used for checking error type with `errors.Is`
 var ErrZcashErrorRpc = fmt.Errorf("ZcashErrorRpc")
-var ErrZcashErrorInvalidPubkeyLength = fmt.Errorf("ZcashErrorInvalidPubkeyLength")
+var ErrZcashErrorInvalidVaultPubkey = fmt.Errorf("ZcashErrorInvalidVaultPubkey")
 var ErrZcashErrorInvalidAddress = fmt.Errorf("ZcashErrorInvalidAddress")
 var ErrZcashErrorNoOrchardReceiver = fmt.Errorf("ZcashErrorNoOrchardReceiver")
 var ErrZcashErrorNotEnoughFunds = fmt.Errorf("ZcashErrorNotEnoughFunds")
@@ -1084,22 +1133,22 @@ func (self ZcashErrorRpc) Is(target error) bool {
 	return target == ErrZcashErrorRpc
 }
 
-type ZcashErrorInvalidPubkeyLength struct {
+type ZcashErrorInvalidVaultPubkey struct {
 	message string
 }
 
-func NewZcashErrorInvalidPubkeyLength() *ZcashError {
+func NewZcashErrorInvalidVaultPubkey() *ZcashError {
 	return &ZcashError{
-		err: &ZcashErrorInvalidPubkeyLength{},
+		err: &ZcashErrorInvalidVaultPubkey{},
 	}
 }
 
-func (err ZcashErrorInvalidPubkeyLength) Error() string {
-	return fmt.Sprintf("InvalidPubkeyLength: %s", err.message)
+func (err ZcashErrorInvalidVaultPubkey) Error() string {
+	return fmt.Sprintf("InvalidVaultPubkey: %s", err.message)
 }
 
-func (self ZcashErrorInvalidPubkeyLength) Is(target error) bool {
-	return target == ErrZcashErrorInvalidPubkeyLength
+func (self ZcashErrorInvalidVaultPubkey) Is(target error) bool {
+	return target == ErrZcashErrorInvalidVaultPubkey
 }
 
 type ZcashErrorInvalidAddress struct {
@@ -1212,7 +1261,7 @@ func (c FfiConverterTypeZcashError) Read(reader io.Reader) *ZcashError {
 	case 1:
 		return &ZcashError{&ZcashErrorRpc{message}}
 	case 2:
-		return &ZcashError{&ZcashErrorInvalidPubkeyLength{message}}
+		return &ZcashError{&ZcashErrorInvalidVaultPubkey{message}}
 	case 3:
 		return &ZcashError{&ZcashErrorInvalidAddress{message}}
 	case 4:
@@ -1233,7 +1282,7 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 	switch variantValue := value.err.(type) {
 	case *ZcashErrorRpc:
 		writeInt32(writer, 1)
-	case *ZcashErrorInvalidPubkeyLength:
+	case *ZcashErrorInvalidVaultPubkey:
 		writeInt32(writer, 2)
 	case *ZcashErrorInvalidAddress:
 		writeInt32(writer, 3)
@@ -1285,6 +1334,49 @@ type FfiDestroyerOptionalString struct{}
 func (_ FfiDestroyerOptionalString) Destroy(value *string) {
 	if value != nil {
 		FfiDestroyerString{}.Destroy(*value)
+	}
+}
+
+type FfiConverterSequenceBytes struct{}
+
+var FfiConverterSequenceBytesINSTANCE = FfiConverterSequenceBytes{}
+
+func (c FfiConverterSequenceBytes) Lift(rb RustBufferI) [][]byte {
+	return LiftFromRustBuffer[[][]byte](c, rb)
+}
+
+func (c FfiConverterSequenceBytes) Read(reader io.Reader) [][]byte {
+	length := readInt32(reader)
+	if length == 0 {
+		return nil
+	}
+	result := make([][]byte, 0, length)
+	for i := int32(0); i < length; i++ {
+		result = append(result, FfiConverterBytesINSTANCE.Read(reader))
+	}
+	return result
+}
+
+func (c FfiConverterSequenceBytes) Lower(value [][]byte) RustBuffer {
+	return LowerIntoRustBuffer[[][]byte](c, value)
+}
+
+func (c FfiConverterSequenceBytes) Write(writer io.Writer, value [][]byte) {
+	if len(value) > math.MaxInt32 {
+		panic("[][]byte is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(value)))
+	for _, item := range value {
+		FfiConverterBytesINSTANCE.Write(writer, item)
+	}
+}
+
+type FfiDestroyerSequenceBytes struct{}
+
+func (FfiDestroyerSequenceBytes) Destroy(sequence [][]byte) {
+	for _, value := range sequence {
+		FfiDestroyerBytes{}.Destroy(value)
 	}
 }
 
@@ -1469,6 +1561,18 @@ func BroadcastRawTx(tx []byte) (string, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func BuildVaultUnauthorizedTx(vault []byte, ptx PartialTx) (Sighashes, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_build_vault_unauthorized_tx(FfiConverterBytesINSTANCE.Lower(vault), FfiConverterTypePartialTxINSTANCE.Lower(ptx), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue Sighashes
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeSighashesINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

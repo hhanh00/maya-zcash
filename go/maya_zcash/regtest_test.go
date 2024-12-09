@@ -143,3 +143,14 @@ func TestCombineVault(t *testing.T) {
         t.Errorf(`Unexpected amount %d`, ptx.Outputs[0].Amount)
     }
 }
+
+func TestBuildVaultUnauthorizedTx(t *testing.T) {
+    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    ptx, _ := PayFromVault(200, vault, "zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr", 500000, "MEMO OUT")
+    sighashes, err := BuildVaultUnauthorizedTx(vault, ptx)
+    if err != nil {
+        t.Errorf(`TestBuildVaultUnauthorizedTx = %v`, err)
+    }
+    fmt.Printf("txseed: %v\n", hex.EncodeToString(ptx.TxSeed))
+    fmt.Printf("sighash[0]: %v\n", hex.EncodeToString(sighashes.Hashes[0]))
+}

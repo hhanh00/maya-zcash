@@ -76,7 +76,8 @@ pub struct MempoolTx {
 }
 
 pub fn scan_mempool(pubkey: Vec<u8>) -> Result<Vec<TxData>, ZcashError> {
-    uniffi_async_export!(config, {
+    uniffi_async_export!(context, {
+        let config = &context.config;
         let vault_addr = get_vault_address(pubkey.clone())?;
         let _ovk = get_ovk(pubkey)?;
 

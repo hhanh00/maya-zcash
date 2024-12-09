@@ -1,4 +1,5 @@
 use crate::network::Network;
+use secp256k1::PublicKey;
 use sha2::Digest as _;
 use zcash_address::unified::{self, Container, Encoding as _, Receiver};
 use zcash_keys::address::Address;
@@ -7,15 +8,14 @@ use zcash_primitives::legacy::TransparentAddress;
 use crate::{uniffi_export, ZcashError};
 
 pub fn get_vault_address(pubkey: Vec<u8>) -> Result<String, ZcashError> {
-    if pubkey.len() != 33 {
-        return Err(ZcashError::InvalidPubkeyLength(hex::encode(&pubkey)));
-    }
-    let taddr = uniffi_export!(config, {
+    let _ = PublicKey::from_slice(&pubkey).map_err(|_| ZcashError::InvalidVaultPubkey)?;
+    let taddr = uniffi_export!(context, {
+        let network = context.config.network();
         let sha = sha2::Sha256::digest(&pubkey);
         let pkh: [u8; 20] = ripemd::Ripemd160::digest(&sha).into();
         let tkey = TransparentAddress::PublicKeyHash(pkh);
         let taddr = zcash_client_backend::address::Address::Transparent(tkey);
-        let taddr = taddr.encode(&config.network());
+        let taddr = taddr.encode(&network);
         taddr
     });
     Ok(taddr)
@@ -31,8 +31,9 @@ pub fn get_ovk(pubkey: Vec<u8>) -> Result<Vec<u8>, ZcashError> {
 }
 
 pub fn validate_address(address: String) -> Result<bool, ZcashError> {
-    uniffi_export!(config, {
-        let r = Address::decode(&config.network(), &address);
+    uniffi_export!(context, {
+        let network = context.config.network();
+        let r = Address::decode(&network, &address);
         let res = match r {
             // TEX addresses are for centralized exchanges (i.e.
             // Binance); there is no reason to support them.
@@ -48,8 +49,8 @@ pub fn match_with_blockchain_receiver(
     address: String,
     receiver: String,
 ) -> Result<bool, ZcashError> {
-    uniffi_export!(config, {
-        let network = config.network();
+    uniffi_export!(context, {
+        let network = context.config.network();
         let address_receivers = extract_receivers(&network, &address)?;
         let receivers = extract_receivers(&network, &receiver)?;
         if receivers.len() != 1 {

@@ -1,9 +1,10 @@
-use std::{collections::HashMap, env, fs::File, io::Read};
+use std::{collections::HashMap, env, fs::File, io::Read, path::PathBuf};
 
 use anyhow::Result;
 use tokio::runtime::Runtime;
 
 use serde::Deserialize;
+use zcash_proofs::prover::LocalTxProver;
 
 use crate::network::Network;
 
@@ -34,6 +35,7 @@ impl Config {
 pub struct Context {
     pub config: Config,
     pub runtime: Runtime,
+    pub sapling_prover: LocalTxProver,
 }
 
 pub fn read_config(name: &str) -> Result<Config> {
@@ -45,4 +47,13 @@ pub fn read_config(name: &str) -> Result<Config> {
     let config = subst::yaml::from_str::<Config, _>(&s, &env_vars)?;
 
     Ok(config)
+}
+
+pub fn build_provers(config: &Config) -> LocalTxProver {
+    let param_dir = PathBuf::from(&config.sapling_params_dir);
+    let prover = LocalTxProver::new(
+        param_dir.join("sapling-spend.params").as_path(),
+        param_dir.join("sapling-output.params").as_path(),
+    );
+    prover
 }

@@ -1,7 +1,7 @@
 [Error]
 enum ZcashError {
     "RPC",
-    "InvalidPubkeyLength",
+    "InvalidVaultPubkey",
     "InvalidAddress",
     "NoOrchardReceiver",
     "NotEnoughFunds",
@@ -59,6 +59,11 @@ dictionary PartialTx {
     sequence<UTXO> inputs;
     sequence<Output> outputs;
     u64 fee;
+    bytes tx_seed;
+};
+
+dictionary Sighashes {
+    sequence<bytes> hashes;
 };
 
 namespace maya_zcash {
@@ -122,4 +127,9 @@ namespace maya_zcash {
         u32 height, 
         bytes vault,
         sequence<UTXO> utxos);
+
+    [Throws=ZcashError]
+    Sighashes build_vault_unauthorized_tx(
+        bytes vault,
+        PartialTx ptx);
 };

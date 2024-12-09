@@ -7,13 +7,14 @@ use uuid::Uuid;
 use zcash_primitives::legacy::TransparentAddress;
 
 use crate::{
-    config::Config,
+    config::Context,
     rpc::{json_request, map_rpc_error},
     uniffi_async_export, uniffi_export, ZcashError,
 };
 
 pub fn get_balance(address: String) -> Result<u64, ZcashError> {
-    uniffi_async_export!(config, {
+    uniffi_async_export!(context, {
+        let config = &context.config;
         let id = Uuid::new_v4().to_string();
         let rep = json_request(config, &id, "getaddressbalance", vec![address.into()])
             .await
@@ -38,10 +39,11 @@ pub struct UTXO {
 }
 
 pub fn list_utxos(address: String) -> Result<Vec<UTXO>, ZcashError> {
-    uniffi_async_export!(config, { list_utxos_async(config, address).await })
+    uniffi_async_export!(context, { list_utxos_async(&context, address).await })
 }
 
-pub async fn list_utxos_async(config: &Config, address: String) -> Result<Vec<UTXO>, ZcashError> {
+pub async fn list_utxos_async(context: &Context, address: String) -> Result<Vec<UTXO>, ZcashError> {
+    let config = &context.config;
     let id = Uuid::new_v4().to_string();
 
     let rep = json_request(config, &id, "getaddressutxos", vec![address.into()])
@@ -61,7 +63,8 @@ pub struct TransparentKey {
 }
 
 pub fn sk_to_pub(wif: String) -> Result<TransparentKey, ZcashError> {
-    uniffi_export!(config, {
+    uniffi_export!(context, {
+        let network = context.config.network();
         let (_, sk) = wif
             .from_base58check()
             .map_err(|_| anyhow::anyhow!("Not Base58 Encoded"))?;
@@ -76,7 +79,7 @@ pub fn sk_to_pub(wif: String) -> Result<TransparentKey, ZcashError> {
         let pkh: [u8; 20] = ripemd::Ripemd160::digest(&sha).into();
         let addr = TransparentAddress::PublicKeyHash(pkh);
         let addr = zcash_client_backend::address::Address::Transparent(addr);
-        let addr = addr.encode(&config.network());
+        let addr = addr.encode(&network);
         let tk = TransparentKey {
             sk: skb.to_vec(),
             pk,

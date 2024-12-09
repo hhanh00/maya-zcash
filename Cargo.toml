@@ -37,6 +37,9 @@ blake2b_simd = "1.0.2"
 secp256k1 = "0.27.0"
 base58check = "0.1.0"
 rand_core = "0.6.4"
+rand_chacha = "0.3.1"
+sapling-crypto = "0.3.0"
+orchard = "0.10.0"
 
 zcash_keys = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd", features = ["sapling", "orchard", "test-dependencies"] }
 zcash_protocol = { git = "https://github.com/hhanh00/librustzcash.git", rev = "029c3ddd", features = ["local-consensus"] }
