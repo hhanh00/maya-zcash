@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use orchard::{builder::BundleType, bundle::Flags, keys::OutgoingViewingKey, value::NoteValue};
 use rand_core::{OsRng, RngCore, SeedableRng};
 use sapling_crypto::{note_encryption::Zip212Enforcement, Anchor};
-use secp256k1::{PublicKey, SecretKey};
+use secp256k1::{ecdsa::Signature, All, PublicKey, Secp256k1, SecretKey};
 use zcash_keys::{
     address::{Address, Receiver},
     encoding::AddressCodec,
@@ -301,117 +301,12 @@ pub fn build_vault_unauthorized_tx(
     ptx: PartialTx,
 ) -> Result<Sighashes, ZcashError> {
     uniffi_export!(context, {
-        let network = context.config.network();
-        let mut tx_rng = rand_chacha::ChaCha20Rng::from_seed(to_ba(&ptx.tx_seed)?);
-        let pk = PublicKey::from_slice(&vault).map_err(|_| ZcashError::InvalidVaultPubkey)?;
-        let ovk = get_ovk(vault)?;
-
-        let mut tbuilder = TransparentBuilder::empty();
-        for i in ptx.inputs.iter() {
-            let UTXO {
-                txid,
-                vout,
-                script,
-                value,
-                ..
-            } = i;
-            let op = OutPoint::new(to_hash(&txid)?, *vout);
-            let coin = TxOut {
-                value: Zatoshis::from_u64(*value).unwrap(),
-                script_pubkey: Script(hex::decode(script).unwrap()),
-            };
-            tbuilder
-                .add_input_without_sk(pk, op, coin)
-                .map_err(|e| ZcashError::AssertError(e.to_string()))?;
-        }
-
-        let mut sbuilder = sapling_crypto::builder::Builder::new(
-            Zip212Enforcement::On,
-            sapling_crypto::builder::BundleType::Transactional {
-                bundle_required: false,
-            },
-            Anchor::empty_tree(), // not required when there are no shielded input
-        );
-        let mut obuilder = orchard::builder::Builder::new(
-            BundleType::Transactional {
-                flags: Flags::ENABLED,
-                bundle_required: false,
-            },
-            orchard::Anchor::empty_tree(),
-        );
-
-        for o in ptx.outputs.iter() {
-            let Output {
-                address,
-                amount,
-                memo,
-            } = o;
-            let recipient = Address::decode(&network, &address)
-                .ok_or(ZcashError::InvalidAddress(address.clone()))?;
-
-            let mut hr = |receiver: Receiver| {
-                handle_receiver(
-                    receiver,
-                    *amount,
-                    &memo,
-                    &ovk,
-                    &mut tbuilder,
-                    &mut sbuilder,
-                    &mut obuilder,
-                )
-            };
-
-            match recipient {
-                Address::Tex(_) => Err(ZcashError::InvalidAddress(address.clone())),
-                Address::Transparent(transparent_address) => {
-                    hr(Receiver::Transparent(transparent_address))
-                }
-                Address::Sapling(payment_address) => hr(Receiver::Sapling(payment_address)),
-                Address::Unified(unified_address) => {
-                    if let Some(&receiver) = unified_address.orchard() {
-                        hr(Receiver::Orchard(receiver))
-                    } else if let Some(&receiver) = unified_address.sapling() {
-                        hr(Receiver::Sapling(receiver))
-                    } else if let Some(&receiver) = unified_address.transparent() {
-                        hr(Receiver::Transparent(receiver))
-                    } else {
-                        Err(ZcashError::AssertError("Unreachable".into()))
-                    }
-                }
-            }?;
-        }
-
-        let tbundle = tbuilder.build();
-        let sbundle = sbuilder
-            .build::<LocalTxProver, LocalTxProver, _, Amount>(&mut tx_rng)
-            .map_err(to_zcasherror(anyhow!("Cannot build sapling bundle")))?
-            .map(|(bundle, _)| {
-                let prover: &LocalTxProver = &context.sapling_prover;
-                bundle.create_proofs(prover, prover, &mut tx_rng, ())
-            });
-        let obundle = obuilder
-            .build::<Amount>(&mut tx_rng)
-            .map_err(to_zcasherror(anyhow!("Cannot build orchard bundle")))?
-            .map(|v| v.0);
-
-        let height = BlockHeight::from_u32(ptx.height);
-        let consensus_branch_id = BranchId::for_height(&network, height);
-        let version = TxVersion::suggested_for_branch(consensus_branch_id);
-        let unauthed_tx: TransactionData<zcash_primitives::transaction::Unauthorized> =
-            TransactionData::from_parts(
-                version,
-                consensus_branch_id,
-                0,
-                height,
-                tbundle,
-                None,
-                sbundle,
-                obundle,
-            );
+        let unauthed_tx = build_unauthorized_tx(&context, vault, &ptx)?;
         let txid_parts = unauthed_tx.digest(TxIdDigester);
         let _txid = signature_hash(&unauthed_tx, &SignableInput::Shielded, &txid_parts)
             .as_ref()
             .to_vec();
+        tracing::info!("txid {}", hex::encode(_txid));
 
         let mut sighashes = vec![];
         for (index, inp) in ptx.inputs.iter().enumerate() {
@@ -432,8 +327,125 @@ pub fn build_vault_unauthorized_tx(
             sighashes.push(sighash);
         }
         let sighashes = Sighashes { hashes: sighashes };
+
         Ok::<_, ZcashError>(sighashes)
     })
+}
+
+fn build_unauthorized_tx(
+    context: &Context,
+    vault: Vec<u8>,
+    ptx: &PartialTx,
+) -> Result<TransactionData<zcash_primitives::transaction::Unauthorized>, ZcashError> {
+    let network = context.config.network();
+    let mut tx_rng = rand_chacha::ChaCha20Rng::from_seed(to_ba(&ptx.tx_seed)?);
+    let pk = PublicKey::from_slice(&vault).map_err(|_| ZcashError::InvalidVaultPubkey)?;
+    let ovk = get_ovk(vault)?;
+
+    let mut tbuilder = TransparentBuilder::empty();
+    for i in ptx.inputs.iter() {
+        let UTXO {
+            txid,
+            vout,
+            script,
+            value,
+            ..
+        } = i;
+        let op = OutPoint::new(to_hash(&txid)?, *vout);
+        let coin = TxOut {
+            value: Zatoshis::from_u64(*value).unwrap(),
+            script_pubkey: Script(hex::decode(script).unwrap()),
+        };
+        tbuilder
+            .add_input_without_sk(pk, op, coin)
+            .map_err(|e| ZcashError::AssertError(e.to_string()))?;
+    }
+
+    let mut sbuilder = sapling_crypto::builder::Builder::new(
+        Zip212Enforcement::On,
+        sapling_crypto::builder::BundleType::Transactional {
+            bundle_required: false,
+        },
+        Anchor::empty_tree(), // not required when there are no shielded input
+    );
+    let mut obuilder = orchard::builder::Builder::new(
+        BundleType::Transactional {
+            flags: Flags::ENABLED,
+            bundle_required: false,
+        },
+        orchard::Anchor::empty_tree(),
+    );
+
+    for o in ptx.outputs.iter() {
+        let Output {
+            address,
+            amount,
+            memo,
+        } = o;
+        let recipient = Address::decode(&network, &address)
+            .ok_or(ZcashError::InvalidAddress(address.clone()))?;
+
+        let mut hr = |receiver: Receiver| {
+            handle_receiver(
+                receiver,
+                *amount,
+                &memo,
+                &ovk,
+                &mut tbuilder,
+                &mut sbuilder,
+                &mut obuilder,
+            )
+        };
+
+        match recipient {
+            Address::Tex(_) => Err(ZcashError::InvalidAddress(address.clone())),
+            Address::Transparent(transparent_address) => {
+                hr(Receiver::Transparent(transparent_address))
+            }
+            Address::Sapling(payment_address) => hr(Receiver::Sapling(payment_address)),
+            Address::Unified(unified_address) => {
+                if let Some(&receiver) = unified_address.orchard() {
+                    hr(Receiver::Orchard(receiver))
+                } else if let Some(&receiver) = unified_address.sapling() {
+                    hr(Receiver::Sapling(receiver))
+                } else if let Some(&receiver) = unified_address.transparent() {
+                    hr(Receiver::Transparent(receiver))
+                } else {
+                    Err(ZcashError::AssertError("Unreachable".into()))
+                }
+            }
+        }?;
+    }
+
+    let tbundle = tbuilder.build();
+    let sbundle = sbuilder
+        .build::<LocalTxProver, LocalTxProver, _, Amount>(&mut tx_rng)
+        .map_err(to_zcasherror(anyhow!("Cannot build sapling bundle")))?
+        .map(|(bundle, _)| {
+            let prover: &LocalTxProver = &context.sapling_prover;
+            bundle.create_proofs(prover, prover, &mut tx_rng, ())
+        });
+    let obundle = obuilder
+        .build::<Amount>(&mut tx_rng)
+        .map_err(to_zcasherror(anyhow!("Cannot build orchard bundle")))?
+        .map(|v| v.0);
+
+    let height = BlockHeight::from_u32(ptx.height);
+    let consensus_branch_id = BranchId::for_height(&network, height);
+    let version = TxVersion::suggested_for_branch(consensus_branch_id);
+    let unauthed_tx: TransactionData<zcash_primitives::transaction::Unauthorized> =
+        TransactionData::from_parts(
+            version,
+            consensus_branch_id,
+            0,
+            height,
+            tbundle,
+            None,
+            sbundle,
+            obundle,
+        );
+
+    Ok(unauthed_tx)
 }
 
 fn handle_receiver(
@@ -488,4 +500,47 @@ fn handle_receiver(
     }
 
     Ok::<_, ZcashError>(())
+}
+
+pub fn sign_sighash(sk: Vec<u8>, sighash: Vec<u8>) -> Result<Vec<u8>, ZcashError> {
+    let sk = SecretKey::from_slice(&sk).map_err(to_zcasherror(anyhow!("Invalid Secret Key")))?;
+    let secp = Secp256k1::<All>::new();
+
+    let msg = secp256k1::Message::from_slice(&sighash)
+        .map_err(|e| anyhow::anyhow!("Invalid signature hash: {}", e))?;
+    let sig = secp.sign_ecdsa(&msg, &sk);
+    let sig = sig.serialize_compact().to_vec();
+
+    Ok(sig)
+}
+
+pub fn apply_signatures(vault: Vec<u8>, ptx: PartialTx, signatures: Vec<Vec<u8>>) -> Result<Vec<u8>, ZcashError> {
+    uniffi_export!(context, {
+        let unauthed_tx = build_unauthorized_tx(&context, vault, &ptx)?;
+        let signatures = signatures.iter().map(|s| Signature::from_compact(&s)).collect::<Result<Vec<_>, _>>()
+            .map_err(to_zcasherror(anyhow!("Invalid signature(s)")))?;
+        let txid_parts = unauthed_tx.digest(TxIdDigester);
+        let txid = signature_hash(&unauthed_tx, &SignableInput::Shielded, &txid_parts)
+            .as_ref()
+            .clone();
+        tracing::info!("txid {}", hex::encode(txid));
+
+        let pk = &context.orchard_prover;
+        let tx_data: TransactionData<zcash_primitives::transaction::Authorized> = unauthed_tx.map_bundles(
+            |tb| tb.map(|tb| tb.apply_external_signatures(signatures)),
+            |sb| sb.map(|sb| sb.apply_signatures(OsRng, txid.clone(), &[]).unwrap()),
+            |ob| {
+                ob.map(|ob| {
+                    let ob = ob.create_proof(pk, OsRng).unwrap();
+                    ob.apply_signatures(OsRng, txid.clone(), &[]).unwrap()
+                })
+            },
+        );
+
+        let tx = tx_data.freeze().unwrap();
+        let mut buffer = vec![];
+        tx.write(&mut buffer).unwrap();
+    
+        Ok::<_, ZcashError>(buffer)
+    })
 }

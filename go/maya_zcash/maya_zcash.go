@@ -344,6 +344,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_apply_signatures(uniffiStatus)
+		})
+		if checksum != 24461 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_apply_signatures: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_broadcast_raw_tx(uniffiStatus)
 		})
 		if checksum != 14042 {
@@ -466,6 +475,15 @@ func uniffiCheckChecksums() {
 		if checksum != 12684 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_send_to_vault: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_sign_sighash(uniffiStatus)
+		})
+		if checksum != 29344 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_sign_sighash: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -1552,6 +1570,18 @@ func (FfiDestroyerSequenceTypeUtxo) Destroy(sequence []Utxo) {
 	}
 }
 
+func ApplySignatures(vault []byte, ptx PartialTx, signatures [][]byte) ([]byte, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_apply_signatures(FfiConverterBytesINSTANCE.Lower(vault), FfiConverterTypePartialTxINSTANCE.Lower(ptx), FfiConverterSequenceBytesINSTANCE.Lower(signatures), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue []byte
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterBytesINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
 func BroadcastRawTx(tx []byte) (string, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_maya_zcash_fn_func_broadcast_raw_tx(FfiConverterBytesINSTANCE.Lower(tx), _uniffiStatus)
@@ -1712,6 +1742,18 @@ func SendToVault(expiryHeight uint32, sk []byte, from string, vault []byte, amou
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeTxBytesINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func SignSighash(sk []byte, sighash []byte) ([]byte, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_sign_sighash(FfiConverterBytesINSTANCE.Lower(sk), FfiConverterBytesINSTANCE.Lower(sighash), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue []byte
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterBytesINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

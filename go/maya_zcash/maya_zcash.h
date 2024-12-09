@@ -68,6 +68,13 @@ int8_t uniffiForeignExecutorCallbackmaya_zcash(uint64_t, uint32_t, RustTaskCallb
 
 void uniffiFutureContinuationCallbackmaya_zcash(void*, int8_t);
 
+RustBuffer uniffi_maya_zcash_fn_func_apply_signatures(
+	RustBuffer vault,
+	RustBuffer ptx,
+	RustBuffer signatures,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_maya_zcash_fn_func_broadcast_raw_tx(
 	RustBuffer tx,
 	RustCallStatus* out_status
@@ -147,6 +154,12 @@ RustBuffer uniffi_maya_zcash_fn_func_send_to_vault(
 	RustBuffer vault,
 	uint64_t amount,
 	RustBuffer memo,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_maya_zcash_fn_func_sign_sighash(
+	RustBuffer sk,
+	RustBuffer sighash,
 	RustCallStatus* out_status
 );
 
@@ -459,6 +472,10 @@ void ffi_maya_zcash_rust_future_complete_void(
 	RustCallStatus* out_status
 );
 
+uint16_t uniffi_maya_zcash_checksum_func_apply_signatures(
+	RustCallStatus* out_status
+);
+
 uint16_t uniffi_maya_zcash_checksum_func_broadcast_raw_tx(
 	RustCallStatus* out_status
 );
@@ -512,6 +529,10 @@ uint16_t uniffi_maya_zcash_checksum_func_scan_mempool(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_send_to_vault(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_sign_sighash(
 	RustCallStatus* out_status
 );
 

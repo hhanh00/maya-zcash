@@ -1,6 +1,7 @@
 use std::{collections::HashMap, env, fs::File, io::Read, path::PathBuf};
 
 use anyhow::Result;
+use orchard::circuit::ProvingKey;
 use tokio::runtime::Runtime;
 
 use serde::Deserialize;
@@ -36,6 +37,7 @@ pub struct Context {
     pub config: Config,
     pub runtime: Runtime,
     pub sapling_prover: LocalTxProver,
+    pub orchard_prover: ProvingKey,
 }
 
 pub fn read_config(name: &str) -> Result<Config> {

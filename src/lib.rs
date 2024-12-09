@@ -8,6 +8,7 @@ pub mod scan;
 pub mod wallet;
 
 use config::{build_provers, Context};
+use orchard::circuit::ProvingKey;
 use parking_lot::ReentrantMutex;
 use thiserror::Error;
 use tokio::runtime::Runtime;
@@ -50,6 +51,7 @@ fn init() -> Context {
         config,
         runtime,
         sapling_prover: prover,
+        orchard_prover: ProvingKey::build(),
     };
     context
 }
@@ -65,7 +67,7 @@ use crate::addr::{get_ovk, get_vault_address, match_with_blockchain_receiver, va
 use crate::chain::{broadcast_raw_tx, get_latest_height};
 use crate::pay::{
     build_vault_unauthorized_tx, combine_vault, combine_vault_utxos, pay_from_vault, send_to_vault,
-    Output, PartialTx, Sighashes, TxBytes,
+    sign_sighash, apply_signatures, Output, PartialTx, Sighashes, TxBytes,
 };
 use crate::scan::{scan_mempool, Note, TxData};
 use crate::wallet::{get_balance, list_utxos, sk_to_pub, TransparentKey, UTXO};

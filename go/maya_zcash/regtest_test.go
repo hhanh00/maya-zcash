@@ -19,13 +19,13 @@ func TestLatestHeight(t *testing.T) {
 }
 
 func TestVaultAddress(t *testing.T) {
-    bytes, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    bytes, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
     address, err := GetVaultAddress(bytes)
     if err != nil {
         t.Errorf(`TestVaultAddress = %v`, err)
     }
     fmt.Printf("address: %v\n", address)
-    // regtest: tmWksakBYGg7Lqtm1EqSqvPkVYJHYxGq6Za
+    // regtest: tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6
 }
 
 func TestValidateAddress(t *testing.T) {
@@ -60,7 +60,7 @@ func TestMatchWithBlockchainReceiver(t *testing.T) {
 }
 
 func TestBalance(t *testing.T) {
-    balance, err := GetBalance("tmWksakBYGg7Lqtm1EqSqvPkVYJHYxGq6Za")
+    balance, err := GetBalance("tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6")
     if err != nil {
         t.Errorf(`TestBalance = %v`, err)
     }
@@ -70,7 +70,7 @@ func TestBalance(t *testing.T) {
 }
 
 func TestListUTXO(t *testing.T) {
-    utxos, err := ListUtxos("tmWksakBYGg7Lqtm1EqSqvPkVYJHYxGq6Za")
+    utxos, err := ListUtxos("tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6")
     if err != nil {
         t.Errorf(`TestListUTXO = %v`, err)
     }
@@ -83,7 +83,7 @@ func TestListUTXO(t *testing.T) {
 }
 
 func TestScanMempool(t *testing.T) {
-    bytes, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    bytes, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
     _, err := ScanMempool(bytes)
     if err != nil {
         t.Errorf(`TestScanMempool = %v`, err)
@@ -91,17 +91,20 @@ func TestScanMempool(t *testing.T) {
 }
 
 func TestSKToPub(t *testing.T) {
-    k, err := SkToPub("L1sjrupHTXwtX847jZhXpkACVYE6d4edPeJK9762j7AeCYL4c32z")
+    // This is the secret key of the vault
+    k, err := SkToPub("L1rrP7J2tqVfC5sj5wi8Gn4M2f4kyX1dByHPVHCa6Mzyz8eahu77")
     if err != nil {
         t.Errorf(`TestSKToPub = %v`, err)
     }
     sk := hex.EncodeToString(k.Sk)
-    fmt.Printf("sk: %s k: %v\n", sk, k)
+    pk := hex.EncodeToString(k.Pk)
+    fmt.Printf("sk: %s pk: %v addr %s\n", sk, pk, k.Addr)
 }
 
 func TestSendToVault(t *testing.T) {
+    // secret key of the user account: L1sjrupHTXwtX847jZhXpkACVYE6d4edPeJK9762j7AeCYL4c32z
     sk, _ := hex.DecodeString("8ae9c0c958937eeec71e034650e889085c10e91ae1ab94a26c26182f9516a37f")
-    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
     _, err := SendToVault(200, sk, "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", vault, 10000000, "MEMO")
     if err != nil {
         t.Errorf(`TestSendToVault = %v`, err)
@@ -123,7 +126,7 @@ func TestBroadcast(t *testing.T) {
 }
 
 func TestPayFromVault(t *testing.T) {
-    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
     ptx, err := PayFromVault(200, vault, "tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU", 500000, "MEMO OUT")
     if err != nil {
         t.Errorf(`TestPayFromVault = %v`, err)
@@ -134,7 +137,7 @@ func TestPayFromVault(t *testing.T) {
 }
 
 func TestCombineVault(t *testing.T) {
-    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
     ptx, err := CombineVault(200, vault)
     if err != nil {
         t.Errorf(`TestCombineVault = %v`, err)
@@ -145,7 +148,7 @@ func TestCombineVault(t *testing.T) {
 }
 
 func TestBuildVaultUnauthorizedTx(t *testing.T) {
-    vault, _ := hex.DecodeString("02c72d6f1a74d169ddbdf5b7da258ece5fa09cc6b13385a8b0bcd7b1aef3bf4483")
+    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
     ptx, _ := PayFromVault(200, vault, "zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr", 500000, "MEMO OUT")
     sighashes, err := BuildVaultUnauthorizedTx(vault, ptx)
     if err != nil {
@@ -153,4 +156,33 @@ func TestBuildVaultUnauthorizedTx(t *testing.T) {
     }
     fmt.Printf("txseed: %v\n", hex.EncodeToString(ptx.TxSeed))
     fmt.Printf("sighash[0]: %v\n", hex.EncodeToString(sighashes.Hashes[0]))
+}
+
+func TestSignSighash(t *testing.T) {
+    sk, _ := hex.DecodeString("8ae9c0c958937eeec71e034650e889085c10e91ae1ab94a26c26182f9516a37f")
+    sighash, _ := hex.DecodeString("32fe38e61df5290198ec736e7b0a1b7cb8a372e42d26c2e3aabcfed29977e911")
+    signature, err := SignSighash(sk, sighash)
+    if err != nil {
+        t.Errorf(`TestSignSighash = %v`, err)
+    }
+    fmt.Printf("signature: %v\n", hex.EncodeToString(signature))
+}
+
+func TestApplySignatures(t *testing.T) {
+    vault_sk, _ := hex.DecodeString("8a74dce839bc2228428ed5de3c2edbabb5c9713f5e6eeb808f9c56640921c6c9")
+    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
+    ptx, _ := PayFromVault(200, vault, "zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr", 500000, "MEMO OUT")
+    sighashes, _ := BuildVaultUnauthorizedTx(vault, ptx)
+    signatures := make([][]byte, 0)
+    for _, sighash := range sighashes.Hashes {
+        signature, _ := SignSighash(vault_sk, sighash)
+        signatures = append(signatures, signature)
+    }
+    txb, err := ApplySignatures(vault, ptx, signatures)
+    if err != nil {
+        t.Errorf(`TestApplySignatures = %v`, err)
+    }
+    // fmt.Printf("txb: %v\n", hex.EncodeToString(txb))
+    txid, _ := BroadcastRawTx(txb)
+    fmt.Printf("txid: %s\n", txid)
 }

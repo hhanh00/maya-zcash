@@ -132,4 +132,15 @@ namespace maya_zcash {
     Sighashes build_vault_unauthorized_tx(
         bytes vault,
         PartialTx ptx);
+
+    [Throws=ZcashError]
+    bytes sign_sighash(
+        bytes sk,
+        bytes sighash);
+
+    [Throws=ZcashError]
+    bytes apply_signatures(
+        bytes vault,
+        PartialTx ptx,
+        sequence<bytes> signatures);
 };
