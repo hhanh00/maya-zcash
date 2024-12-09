@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use orchard::{
     note_encryption::OrchardDomain,
     primitives::redpallas::{SpendAuth, VerificationKey},
@@ -18,11 +18,11 @@ use zcash_protocol::memo::{Memo, MemoBytes};
 
 use crate::{
     addr::{get_ovk, get_vault_address},
-    config::Config,
+    config::{Config, Context},
     network::Network,
     pay::Output,
     rpc::{json_request, map_rpc_error},
-    to_ba, to_hash, to_uhash, uniffi_async_export, ZcashError,
+    to_ba, to_hash, to_uhash, to_zcasherror, uniffi_async_export, ZcashError,
 };
 
 pub struct Note {
@@ -33,7 +33,6 @@ pub struct Note {
 
 pub struct TxData {
     pub txid: String,
-    pub height: u32, // block height or 0 if unconfirmed
     // Who paid us or who we are paying, and how much
     // value > 0 -> vault received funds
     pub counterparty: Note,
@@ -151,7 +150,6 @@ pub struct Action {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawVaultTx {
-    height: Option<u32>,
     txid: String,
     #[serde(rename = "vin")]
     tins: Vec<TIn>,
@@ -164,7 +162,6 @@ pub struct RawVaultTx {
 
 #[derive(Clone, Debug)]
 pub struct VaultTxDetails {
-    height: u32,
     txid: String,
     tins: Vec<TIn>,
     ptouts: Vec<TOut>,
@@ -190,7 +187,6 @@ pub struct VaultTx {
 impl From<RawVaultTx> for VaultTxDetails {
     fn from(tx: RawVaultTx) -> Self {
         Self {
-            height: tx.height.unwrap_or_default(),
             txid: tx.txid.clone(),
             tins: tx.tins,
             ptouts: vec![],
@@ -206,7 +202,6 @@ impl From<RawVaultTx> for VaultTxDetails {
 }
 
 pub struct VaultTxDecrypted {
-    height: u32,
     txid: String,
     ptouts: Vec<TOut>,
     outputs: Vec<Output>,
@@ -327,7 +322,6 @@ impl VaultTxDetails {
         }
 
         let txdec = VaultTxDecrypted {
-            height: self.height,
             txid: self.txid.clone(),
             ptouts: self.ptouts.clone(),
             outputs,
@@ -338,7 +332,11 @@ impl VaultTxDetails {
 }
 
 impl VaultTx {
-    fn from_decrypted(txd: &VaultTxDecrypted, vault_addr: &str) -> Result<Self, ZcashError> {
+    fn from_decrypted(
+        height: u32,
+        txd: &VaultTxDecrypted,
+        vault_addr: &str,
+    ) -> Result<Self, ZcashError> {
         let spent = txd
             .ptouts
             .iter()
@@ -364,7 +362,7 @@ impl VaultTx {
                 ));
             }
             VaultTx {
-                height: txd.height,
+                height,
                 txid: txd.txid.clone(),
                 counterparty: non_vault_outputs.first().unwrap().clone(),
                 direction: Direction::Outgoing,
@@ -395,7 +393,7 @@ impl VaultTx {
                 counterparty_addr = first_tin.address.clone();
             }
             VaultTx {
-                height: txd.height,
+                height,
                 txid: txd.txid.clone(),
                 counterparty: Output {
                     address: counterparty_addr,
@@ -413,7 +411,6 @@ impl VaultTx {
 pub fn scan_mempool(pubkey: Vec<u8>) -> Result<Vec<VaultTx>, ZcashError> {
     uniffi_async_export!(context, {
         let config = &context.config;
-        let network = config.network();
         let vault_addr = get_vault_address(pubkey.clone())?;
         let ovk = get_ovk(pubkey)?;
 
@@ -435,31 +432,182 @@ pub fn scan_mempool(pubkey: Vec<u8>) -> Result<Vec<VaultTx>, ZcashError> {
 
         let mut txs = vec![];
         for txid in tx_ids.iter() {
-            let id = Uuid::new_v4().to_string();
-            let rep = json_request(
+            if let Some(tx) = process_tx(
                 config,
-                &id,
-                "getrawtransaction",
-                vec![txid.clone().into(), 1.into()],
+                &TxId {
+                    txid: txid.clone(),
+                    height: 0,
+                },
+                &vault_addr,
+                &ovk,
             )
-            .await
-            .map_err(map_rpc_error)?;
-            tracing::debug!("{:?}", rep);
-            let tx: RawVaultTx = serde_json::from_value(rep)
-                .context("Cannot parse getrawtransaction reply")
-                .map_err(map_rpc_error)?;
-            let mut tx: VaultTxDetails = tx.into();
-            if tx.touts.iter().any(|o| o.address == vault_addr) {
-                tx.resolve_inputs(&config).await?;
-                let txd = tx.decrypt(&network, to_ba(&ovk)?)?;
-                let tx = VaultTx::from_decrypted(&txd, &vault_addr)?;
-                tracing::info!("{:?}", tx);
+            .await?
+            {
                 txs.push(tx);
             }
         }
 
         Ok(txs)
     })
+}
+
+async fn process_tx(
+    config: &Config,
+    txid: &TxId,
+    vault_addr: &str,
+    ovk: &[u8],
+) -> Result<Option<VaultTx>, ZcashError> {
+    let network = config.network();
+
+    let id = Uuid::new_v4().to_string();
+    let rep = json_request(
+        config,
+        &id,
+        "getrawtransaction",
+        vec![txid.txid.clone().into(), 1.into()],
+    )
+    .await
+    .map_err(map_rpc_error)?;
+    tracing::debug!("{:?}", rep);
+
+    let tx: RawVaultTx = serde_json::from_value(rep)
+        .context("Cannot parse getrawtransaction reply")
+        .map_err(map_rpc_error)?;
+    let mut tx: VaultTxDetails = tx.into();
+    if tx.touts.iter().any(|o| o.address == vault_addr) {
+        tx.resolve_inputs(&config).await?;
+        let txd = tx.decrypt(&network, to_ba(&ovk)?)?;
+        let tx = VaultTx::from_decrypted(txid.height, &txd, &vault_addr)?;
+        tracing::info!("{:?}", tx);
+        return Ok(Some(tx));
+    }
+    Ok(None)
+}
+
+pub struct BlockTxs {
+    pub start_hash: String,
+    pub end_hash: String,
+    pub start_height: u32,
+    pub end_height: u32,
+    pub txs: Vec<VaultTx>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct BlockHeader {
+    hash: String,
+    height: u32,
+    #[serde(rename = "previousblockhash")]
+    prev_hash: String,
+    #[serde(rename = "nextblockhash")]
+    next_hash: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct TxId {
+    txid: String,
+    height: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct BlockHeight {
+    hash: String,
+    height: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct AddressDeltas {
+    #[serde(rename = "deltas")]
+    txids: Vec<TxId>,
+    start: BlockHeight,
+    end: BlockHeight,
+}
+
+pub fn scan_blocks(
+    pubkey: Vec<u8>,
+    mut prev_hashes: Vec<String>,
+) -> Result<Option<BlockTxs>, ZcashError> {
+    uniffi_async_export!(context, {
+        let config = &context.config;
+        let vault_addr = get_vault_address(pubkey.clone())?;
+        let ovk = get_ovk(pubkey)?;
+
+        if prev_hashes.is_empty() {
+            let id = Uuid::new_v4().to_string();
+            let rep = json_request(config, &id, "getblockhash", vec![1.into()])
+                .await
+                .map_err(map_rpc_error)?;
+            let genesis_hash = rep
+                .as_str()
+                .ok_or(ZcashError::AssertError(
+                    "Failed to retrieve genesis hash".into(),
+                ))?
+                .to_string();
+            prev_hashes = vec![genesis_hash];
+        }
+
+        for prev_hash in prev_hashes {
+            if let Ok(block_txs) = scan_blocks_async(&context, &vault_addr, &ovk, prev_hash).await {
+                return Ok(block_txs);
+            }
+        }
+
+        Err(ZcashError::AssertError("Not reachable".into()))
+    })
+}
+
+async fn scan_blocks_async(
+    context: &Context,
+    vault_addr: &str,
+    ovk: &[u8],
+    prev_hash: String,
+) -> Result<Option<BlockTxs>, ZcashError> {
+    let config = &context.config;
+    let id = Uuid::new_v4().to_string();
+    let rep = json_request(config, &id, "getblockheader", vec![prev_hash.into()])
+        .await
+        .map_err(map_rpc_error)?;
+    let block_header: BlockHeader = serde_json::from_value(rep).map_err(to_zcasherror(anyhow!(
+        "Failed to parse getblockheader reply"
+    )))?;
+    let Some(next_hash) = block_header.next_hash else {
+        return Ok(None);
+    };
+    let start_height = block_header.height + 1;
+
+    let id = Uuid::new_v4().to_string();
+    let rep = json_request(
+        config,
+        &id,
+        "getaddressdeltas",
+        vec![json!({
+            "addresses": [ vault_addr ],
+            "start": start_height,
+            "end": 0,
+            "chainInfo": true
+        })],
+    )
+    .await
+    .map_err(map_rpc_error)?;
+    let deltas: AddressDeltas = serde_json::from_value(rep).map_err(to_zcasherror(anyhow!(
+        "Failed to parse getaddressdeltas reply"
+    )))?;
+
+    if deltas.start.hash != next_hash {
+        return Err(ZcashError::Reorg);
+    }
+
+    for txid in deltas.txids {
+        tracing::info!(">> {} {}", txid.height, txid.txid);
+        process_tx(config, &txid, &vault_addr, &ovk).await?;
+    }
+    let btxs = BlockTxs {
+        start_hash: deltas.start.hash,
+        end_hash: deltas.end.hash,
+        start_height: deltas.start.height,
+        end_height: deltas.end.height,
+        txs: vec![],
+    };
+    Ok(Some(btxs))
 }
 
 fn memo_to_string(memo: &[u8]) -> String {

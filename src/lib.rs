@@ -30,6 +30,8 @@ pub enum ZcashError {
     NotEnoughFunds,
     #[error("Transaction rejected by server")]
     TxRejected,
+    #[error("Chain reorganization")]
+    Reorg,
     #[error("Assertion Failed: {0}")]
     AssertError(String),
 }
@@ -69,7 +71,7 @@ use crate::pay::{
     apply_signatures, build_vault_unauthorized_tx, combine_vault, combine_vault_utxos,
     pay_from_vault, send_to_vault, sign_sighash, Output, PartialTx, Sighashes, TxBytes,
 };
-use crate::scan::{scan_mempool, Direction, VaultTx};
+use crate::scan::{scan_blocks, scan_mempool, BlockTxs, Direction, VaultTx};
 use crate::wallet::{get_balance, list_utxos, sk_to_pub, TransparentKey, UTXO};
 
 uniffi::include_scaffolding!("interface");

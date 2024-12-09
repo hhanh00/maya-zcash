@@ -142,6 +142,12 @@ RustBuffer uniffi_maya_zcash_fn_func_pay_from_vault(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_maya_zcash_fn_func_scan_blocks(
+	RustBuffer pubkey,
+	RustBuffer prev_hashes,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_maya_zcash_fn_func_scan_mempool(
 	RustBuffer pubkey,
 	RustCallStatus* out_status
@@ -521,6 +527,10 @@ uint16_t uniffi_maya_zcash_checksum_func_match_with_blockchain_receiver(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_pay_from_vault(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_scan_blocks(
 	RustCallStatus* out_status
 );
 

@@ -6,6 +6,7 @@ enum ZcashError {
     "NoOrchardReceiver",
     "NotEnoughFunds",
     "TxRejected",
+    "Reorg",
     "AssertError",
 };
 
@@ -38,6 +39,14 @@ dictionary VaultTx {
     u32 height;
     Output counterparty;
     Direction direction;
+};
+
+dictionary BlockTxs {
+    string start_hash;
+    string end_hash;
+    u32 start_height;
+    u32 end_height;
+    sequence<VaultTx> txs;
 };
 
 dictionary TxBytes {
@@ -89,6 +98,9 @@ namespace maya_zcash {
 
     [Throws=ZcashError]
     sequence<VaultTx> scan_mempool(bytes pubkey);
+
+    [Throws=ZcashError]
+    BlockTxs? scan_blocks(bytes pubkey, sequence<string> prev_hashes);
 
     [Throws=ZcashError]
     TxBytes send_to_vault(

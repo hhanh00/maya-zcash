@@ -44,8 +44,8 @@ pub fn list_utxos(address: String) -> Result<Vec<UTXO>, ZcashError> {
 
 pub async fn list_utxos_async(context: &Context, address: String) -> Result<Vec<UTXO>, ZcashError> {
     let config = &context.config;
-    let id = Uuid::new_v4().to_string();
 
+    let id = Uuid::new_v4().to_string();
     let rep = json_request(config, &id, "getaddressutxos", vec![address.into()])
         .await
         .map_err(map_rpc_error)?;

@@ -193,3 +193,11 @@ func TestScanMempool(t *testing.T) {
     }
     fmt.Printf("txs: %v\n", txs)
 }
+
+func TestScanBlocks(t *testing.T) {
+    bytes, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
+    _, err := ScanBlocks(bytes, []string {})
+    if err != nil {
+        t.Errorf(`TestScanBlocks = %v`, err)
+    }
+}
