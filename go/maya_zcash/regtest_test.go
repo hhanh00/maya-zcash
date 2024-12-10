@@ -139,17 +139,6 @@ func TestCombineVault(t *testing.T) {
     }
 }
 
-func TestBuildVaultUnauthorizedTx(t *testing.T) {
-    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
-    ptx, _ := PayFromVault(200, vault, "zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr", 500000, "MEMO OUT")
-    sighashes, err := BuildVaultUnauthorizedTx(vault, ptx)
-    if err != nil {
-        t.Errorf(`TestBuildVaultUnauthorizedTx = %v`, err)
-    }
-    fmt.Printf("txseed: %v\n", hex.EncodeToString(ptx.TxSeed))
-    fmt.Printf("sighash[0]: %v\n", hex.EncodeToString(sighashes.Hashes[0]))
-}
-
 func TestSignSighash(t *testing.T) {
     sk, _ := hex.DecodeString("8ae9c0c958937eeec71e034650e889085c10e91ae1ab94a26c26182f9516a37f")
     sighash, _ := hex.DecodeString("32fe38e61df5290198ec736e7b0a1b7cb8a372e42d26c2e3aabcfed29977e911")
@@ -167,7 +156,7 @@ func TestApplySignatures(t *testing.T) {
     // sapling: zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr
     // orchard: uregtest1w7mhyq5xd5h8zrlqfdnf8kqrd0g8n8q9hg8502e63sr5xuenhyvama2jytdul0k2krj2kq86x86ch8x9eejxh4se8en4jpwdkse7l0gl
     ptx, _ := PayFromVault(200, vault, "tm9j9tS8nTnNQqoJuw8ToinJCapd3WdzGVu", 500000, "MEMO OUT")
-    sighashes, _ := BuildVaultUnauthorizedTx(vault, ptx)
+    sighashes := ptx.Sighashes;
     signatures := make([][]byte, 0)
     for _, sighash := range sighashes.Hashes {
         signature, _ := SignSighash(vault_sk, sighash)

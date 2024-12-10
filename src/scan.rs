@@ -356,15 +356,15 @@ impl VaultTx {
                 .filter(|&o| o.address != vault_addr && o.amount > 0)
                 .cloned()
                 .collect::<Vec<_>>();
-            if non_vault_outputs.len() != 1 {
+            if non_vault_outputs.len() > 1 {
                 return Err(ZcashError::AssertError(
-                    "Payment from vault should have a single recipient".into(),
+                    "Payment from vault should have at most a single recipient".into(),
                 ));
             }
             VaultTx {
                 height,
                 txid: txd.txid.clone(),
-                counterparty: non_vault_outputs.first().unwrap().clone(),
+                counterparty: non_vault_outputs.first().cloned().unwrap_or_default(),
                 direction: Direction::Outgoing,
             }
         } else {

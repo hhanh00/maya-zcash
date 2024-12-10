@@ -65,6 +65,7 @@ dictionary PartialTx {
     sequence<UTXO> inputs;
     sequence<Output> outputs;
     u64 fee;
+    Sighashes sighashes;
     bytes tx_seed;
 };
 
@@ -136,11 +137,6 @@ namespace maya_zcash {
         u32 height, 
         bytes vault,
         sequence<UTXO> utxos);
-
-    [Throws=ZcashError]
-    Sighashes build_vault_unauthorized_tx(
-        bytes vault,
-        PartialTx ptx);
 
     [Throws=ZcashError]
     bytes sign_sighash(

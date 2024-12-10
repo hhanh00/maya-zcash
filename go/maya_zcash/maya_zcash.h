@@ -80,12 +80,6 @@ RustBuffer uniffi_maya_zcash_fn_func_broadcast_raw_tx(
 	RustCallStatus* out_status
 );
 
-RustBuffer uniffi_maya_zcash_fn_func_build_vault_unauthorized_tx(
-	RustBuffer vault,
-	RustBuffer ptx,
-	RustCallStatus* out_status
-);
-
 RustBuffer uniffi_maya_zcash_fn_func_combine_vault(
 	uint32_t height,
 	RustBuffer vault,
@@ -483,10 +477,6 @@ uint16_t uniffi_maya_zcash_checksum_func_apply_signatures(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_broadcast_raw_tx(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_maya_zcash_checksum_func_build_vault_unauthorized_tx(
 	RustCallStatus* out_status
 );
 

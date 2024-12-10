@@ -68,7 +68,7 @@ pub fn init_logger() {
 use crate::addr::{get_ovk, get_vault_address, match_with_blockchain_receiver, validate_address};
 use crate::chain::{broadcast_raw_tx, get_latest_height};
 use crate::pay::{
-    apply_signatures, build_vault_unauthorized_tx, combine_vault, combine_vault_utxos,
+    apply_signatures, combine_vault, combine_vault_utxos,
     pay_from_vault, send_to_vault, sign_sighash, Output, PartialTx, Sighashes, TxBytes,
 };
 use crate::scan::{scan_blocks, scan_mempool, BlockTxs, Direction, VaultTx};

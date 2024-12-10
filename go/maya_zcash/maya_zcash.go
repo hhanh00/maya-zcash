@@ -362,15 +362,6 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_maya_zcash_checksum_func_build_vault_unauthorized_tx(uniffiStatus)
-		})
-		if checksum != 928 {
-			// If this happens try cleaning and rebuilding your project
-			panic("maya_zcash: uniffi_maya_zcash_checksum_func_build_vault_unauthorized_tx: UniFFI API checksum mismatch")
-		}
-	}
-	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_combine_vault(uniffiStatus)
 		})
 		if checksum != 25110 {
@@ -825,11 +816,12 @@ func (_ FfiDestroyerTypeOutput) Destroy(value Output) {
 }
 
 type PartialTx struct {
-	Height  uint32
-	Inputs  []Utxo
-	Outputs []Output
-	Fee     uint64
-	TxSeed  []byte
+	Height    uint32
+	Inputs    []Utxo
+	Outputs   []Output
+	Fee       uint64
+	Sighashes Sighashes
+	TxSeed    []byte
 }
 
 func (r *PartialTx) Destroy() {
@@ -837,6 +829,7 @@ func (r *PartialTx) Destroy() {
 	FfiDestroyerSequenceTypeUtxo{}.Destroy(r.Inputs)
 	FfiDestroyerSequenceTypeOutput{}.Destroy(r.Outputs)
 	FfiDestroyerUint64{}.Destroy(r.Fee)
+	FfiDestroyerTypeSighashes{}.Destroy(r.Sighashes)
 	FfiDestroyerBytes{}.Destroy(r.TxSeed)
 }
 
@@ -854,6 +847,7 @@ func (c FfiConverterTypePartialTx) Read(reader io.Reader) PartialTx {
 		FfiConverterSequenceTypeUTXOINSTANCE.Read(reader),
 		FfiConverterSequenceTypeOutputINSTANCE.Read(reader),
 		FfiConverterUint64INSTANCE.Read(reader),
+		FfiConverterTypeSighashesINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
@@ -867,6 +861,7 @@ func (c FfiConverterTypePartialTx) Write(writer io.Writer, value PartialTx) {
 	FfiConverterSequenceTypeUTXOINSTANCE.Write(writer, value.Inputs)
 	FfiConverterSequenceTypeOutputINSTANCE.Write(writer, value.Outputs)
 	FfiConverterUint64INSTANCE.Write(writer, value.Fee)
+	FfiConverterTypeSighashesINSTANCE.Write(writer, value.Sighashes)
 	FfiConverterBytesINSTANCE.Write(writer, value.TxSeed)
 }
 
@@ -1631,18 +1626,6 @@ func BroadcastRawTx(tx []byte) (string, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
-	}
-}
-
-func BuildVaultUnauthorizedTx(vault []byte, ptx PartialTx) (Sighashes, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_maya_zcash_fn_func_build_vault_unauthorized_tx(FfiConverterBytesINSTANCE.Lower(vault), FfiConverterTypePartialTxINSTANCE.Lower(ptx), _uniffiStatus)
-	})
-	if _uniffiErr != nil {
-		var _uniffiDefaultValue Sighashes
-		return _uniffiDefaultValue, _uniffiErr
-	} else {
-		return FfiConverterTypeSighashesINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

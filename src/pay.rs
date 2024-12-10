@@ -132,7 +132,7 @@ fn select_utxos(
     Ok((inputs, change, f))
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Output {
     pub address: String,
     pub amount: u64,
@@ -145,6 +145,7 @@ pub struct PartialTx {
     pub outputs: Vec<Output>,
     pub fee: u64,
     pub tx_seed: Vec<u8>,
+    pub sighashes: Sighashes,
 }
 
 pub fn pay_from_vault(
@@ -155,7 +156,7 @@ pub fn pay_from_vault(
     memo: String,
 ) -> Result<PartialTx, ZcashError> {
     uniffi_async_export!(context, {
-        let from = get_vault_address(vault)?;
+        let from = get_vault_address(vault.clone())?;
         let utxos = crate::wallet::list_utxos_async(&context, from.clone()).await?;
         let (inputs, change, fee) = select_utxos(&utxos, amount, &memo)?;
         let mut outputs = vec![];
@@ -171,13 +172,15 @@ pub fn pay_from_vault(
         });
         let mut tx_seed = [0u8; 32];
         OsRng.fill_bytes(&mut tx_seed);
-        let partial_tx = PartialTx {
+        let mut partial_tx = PartialTx {
             height,
             inputs,
             outputs,
             fee,
             tx_seed: tx_seed.to_vec(),
+            sighashes: Sighashes::default(),
         };
+        build_vault_unauthorized_tx(vault, &mut partial_tx)?;
 
         Ok::<_, ZcashError>(partial_tx)
     })
@@ -206,7 +209,7 @@ async fn combine_vault_utxos_async(
     vault: Vec<u8>,
     utxos: Vec<UTXO>,
 ) -> Result<PartialTx, ZcashError> {
-    let from = get_vault_address(vault)?;
+    let from = get_vault_address(vault.clone())?;
     let total = utxos.iter().map(|utxo| utxo.value).sum::<u64>();
     let fee = utxos.len() as u64 * BASE_FEE;
     let amount = total - fee;
@@ -217,15 +220,17 @@ async fn combine_vault_utxos_async(
     }];
     let mut tx_seed = [0u8; 32];
     OsRng.fill_bytes(&mut tx_seed);
-    let ptx = PartialTx {
+    let mut partial_tx = PartialTx {
         height,
         inputs: utxos,
         outputs,
         fee,
         tx_seed: tx_seed.to_vec(),
+        sighashes: Sighashes::default(),
     };
+    build_vault_unauthorized_tx(vault, &mut partial_tx)?;
 
-    Ok::<_, ZcashError>(ptx)
+    Ok::<_, ZcashError>(partial_tx)
 }
 
 fn pay_with_utxos(
@@ -293,14 +298,15 @@ fn pay_with_utxos(
     Ok(tx)
 }
 
+#[derive(Default)]
 pub struct Sighashes {
     pub hashes: Vec<Vec<u8>>,
 }
 
-pub fn build_vault_unauthorized_tx(
+fn build_vault_unauthorized_tx(
     vault: Vec<u8>,
-    ptx: PartialTx,
-) -> Result<Sighashes, ZcashError> {
+    ptx: &mut PartialTx,
+) -> Result<(), ZcashError> {
     uniffi_export!(context, {
         let unauthed_tx = build_unauthorized_tx(&context, vault, &ptx)?;
         let txid_parts = unauthed_tx.digest(TxIdDigester);
@@ -328,8 +334,9 @@ pub fn build_vault_unauthorized_tx(
             sighashes.push(sighash);
         }
         let sighashes = Sighashes { hashes: sighashes };
+        ptx.sighashes = sighashes;
 
-        Ok::<_, ZcashError>(sighashes)
+        Ok::<_, ZcashError>(())
     })
 }
 
