@@ -1,8 +1,9 @@
 use crate::network::Network;
+use sapling_crypto::PaymentAddress;
 use secp256k1::PublicKey;
 use sha2::Digest as _;
 use zcash_address::unified::{self, Container, Encoding as _, Receiver};
-use zcash_keys::address::Address;
+use zcash_keys::{address::{Address, UnifiedAddress}, encoding::AddressCodec};
 use zcash_primitives::legacy::TransparentAddress;
 
 use crate::{uniffi_export, ZcashError};
@@ -84,4 +85,41 @@ fn extract_receivers(network: &Network, address: &str) -> Result<Vec<Receiver>, 
         }
     };
     Ok(receivers)
+}
+
+pub fn best_recipient_of_ua(address: String) -> Result<String, ZcashError> {
+    uniffi_export!(context, {
+        let config = &context.config;
+        let network = config.network();
+        let ua = Address::decode(&network, &address)
+        .ok_or_else(|| ZcashError::InvalidAddress(address.to_string()))?;
+        let Address::Unified(ua) = ua else {
+            return Err(ZcashError::InvalidAddress("Not a UA".into()));
+        };
+        let address = if let Some(o) = ua.orchard() {
+            let res = UnifiedAddress::from_receivers(Some(*o), None, None).unwrap();
+            res.encode(&network)
+        }
+        else if let Some(s) = ua.sapling() {
+            s.encode(&network)
+        }
+        else {
+            unreachable!()
+        };
+
+        Ok(address)
+    })
+}
+
+pub fn make_ua(transparent: Option<String>, sapling: Option<String>,
+orchard: Option<String>) -> Result<String, ZcashError> {
+    uniffi_export!(context, {
+        let config = &context.config;
+        let network = config.network();
+        let transparent = transparent.map(|t| TransparentAddress::decode(&network, &t).unwrap());
+        let sapling = sapling.map(|s| PaymentAddress::decode(&network, &s).unwrap());
+        let orchard = orchard.and_then(|o| UnifiedAddress::decode(&network, &o).unwrap().orchard().cloned());
+        let ua = UnifiedAddress::from_receivers(orchard, sapling, transparent).unwrap();
+        Ok(ua.encode(&network))
+    })
 }

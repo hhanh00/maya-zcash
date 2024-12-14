@@ -59,6 +59,30 @@ func TestMatchWithBlockchainReceiver(t *testing.T) {
     // Add test UA not contains Orc
 }
 
+func TestBestRecipientOfUA(t *testing.T) {
+    address, err := BestRecipientOfUa("uregtest1m5wk6ukykhq6jqtctyf2c7ln63v2ue2r63vp5ryaackw9tsjnrl8h5r38e3jc8galzten7fqhkcypdchvfsjrylq23k8cz80hwtcsnu5kwwms6hdg4vljlztg3mnrxv5vvcjp72p90dssz9qpljwlwmq3xfhwdnmm9uun58p9vjpr6kd5sqtcrnqjs3rdu3nld39lzelsytqufwxryq")
+    if err != nil {
+        t.Errorf(`TestBestRecipientOfUA = %v`, err)
+    }
+    if address != "uregtest1w7mhyq5xd5h8zrlqfdnf8kqrd0g8n8q9hg8502e63sr5xuenhyvama2jytdul0k2krj2kq86x86ch8x9eejxh4se8en4jpwdkse7l0gl" {
+        t.Errorf(`TestBestRecipientOfUA = %v, %s`, err, address)
+    }
+}
+
+func TestMakeUA(t *testing.T) {
+    tr := "tm9j9tS8nTnNQqoJuw8ToinJCapd3WdzGVu"
+    sa := "zregtestsapling18ywlqhk60zglax5drk3kwltkmcatf5eptxyrkrx20hcqma5nsvrgh63843seye923qk5wfvxpnr"
+    or := "uregtest1w7mhyq5xd5h8zrlqfdnf8kqrd0g8n8q9hg8502e63sr5xuenhyvama2jytdul0k2krj2kq86x86ch8x9eejxh4se8en4jpwdkse7l0gl"
+
+    address, err := MakeUa(&tr, &sa, &or)
+    if err != nil {
+        t.Errorf(`TestMakeUA = %v`, err)
+    }
+    if address != "uregtest1m5wk6ukykhq6jqtctyf2c7ln63v2ue2r63vp5ryaackw9tsjnrl8h5r38e3jc8galzten7fqhkcypdchvfsjrylq23k8cz80hwtcsnu5kwwms6hdg4vljlztg3mnrxv5vvcjp72p90dssz9qpljwlwmq3xfhwdnmm9uun58p9vjpr6kd5sqtcrnqjs3rdu3nld39lzelsytqufwxryq" {
+        t.Errorf(`TestMakeUA = %v, %s`, err, address)
+    }
+}
+
 func TestBalance(t *testing.T) {
     balance, err := GetBalance("tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6")
     if err != nil {
@@ -133,6 +157,28 @@ func TestCombineVault(t *testing.T) {
     ptx, err := CombineVault(200, vault)
     if err != nil {
         t.Errorf(`TestCombineVault = %v`, err)
+    }
+    if ptx.Outputs[0].Amount != 539995000 {
+        t.Errorf(`Unexpected amount %d`, ptx.Outputs[0].Amount)
+    }
+}
+
+func TestCombineVaultUTXOs(t *testing.T) {
+    vault, _ := hex.DecodeString("03c622fa3be76cd25180d5a61387362181caca77242023be11775134fd37f403f7")
+    utxos, err := ListUtxos("tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6")
+    if err != nil {
+        t.Errorf(`TestCombineVaultUTXOs = %v`, err)
+    }
+    ptx, err := CombineVaultUtxos(200, vault,
+    []Output {
+        Output{
+            Address: "tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6",
+            Amount:  540000000,
+            Memo:    "CONSOLIDATE",
+        },
+    }, utxos)
+    if err != nil {
+        t.Errorf(`TestCombineVaultUTXOs = %v`, err)
     }
     if ptx.Outputs[0].Amount != 539995000 {
         t.Errorf(`Unexpected amount %d`, ptx.Outputs[0].Amount)

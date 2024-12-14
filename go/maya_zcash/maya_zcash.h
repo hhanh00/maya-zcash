@@ -75,6 +75,11 @@ RustBuffer uniffi_maya_zcash_fn_func_apply_signatures(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_maya_zcash_fn_func_best_recipient_of_ua(
+	RustBuffer address,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_maya_zcash_fn_func_broadcast_raw_tx(
 	RustBuffer tx,
 	RustCallStatus* out_status
@@ -89,6 +94,7 @@ RustBuffer uniffi_maya_zcash_fn_func_combine_vault(
 RustBuffer uniffi_maya_zcash_fn_func_combine_vault_utxos(
 	uint32_t height,
 	RustBuffer vault,
+	RustBuffer destination_vaults,
 	RustBuffer utxos,
 	RustCallStatus* out_status
 );
@@ -118,6 +124,13 @@ void uniffi_maya_zcash_fn_func_init_logger(
 
 RustBuffer uniffi_maya_zcash_fn_func_list_utxos(
 	RustBuffer address,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_maya_zcash_fn_func_make_ua(
+	RustBuffer transparent,
+	RustBuffer sapling,
+	RustBuffer orchard,
 	RustCallStatus* out_status
 );
 
@@ -476,6 +489,10 @@ uint16_t uniffi_maya_zcash_checksum_func_apply_signatures(
 	RustCallStatus* out_status
 );
 
+uint16_t uniffi_maya_zcash_checksum_func_best_recipient_of_ua(
+	RustCallStatus* out_status
+);
+
 uint16_t uniffi_maya_zcash_checksum_func_broadcast_raw_tx(
 	RustCallStatus* out_status
 );
@@ -509,6 +526,10 @@ uint16_t uniffi_maya_zcash_checksum_func_init_logger(
 );
 
 uint16_t uniffi_maya_zcash_checksum_func_list_utxos(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_maya_zcash_checksum_func_make_ua(
 	RustCallStatus* out_status
 );
 
