@@ -7,6 +7,8 @@ enum ZcashError {
     "NotEnoughFunds",
     "TxRejected",
     "Reorg",
+    "MismatchAmounts",
+    "UnequalTMemo",
     "AssertError",
 };
 
@@ -92,6 +94,12 @@ namespace maya_zcash {
     boolean match_with_blockchain_receiver(string address, string receiver);
 
     [Throws=ZcashError]
+    string best_recipient_of_ua(string address);
+
+    [Throws=ZcashError]
+    string make_ua(string? transparent, string? sapling, string? orchard);
+
+    [Throws=ZcashError]
     u64 get_balance(string address);
 
     [Throws=ZcashError]
@@ -136,6 +144,7 @@ namespace maya_zcash {
     PartialTx combine_vault_utxos(
         u32 height, 
         bytes vault,
+        sequence<Output> destination_vaults,
         sequence<UTXO> utxos);
 
     [Throws=ZcashError]

@@ -32,6 +32,10 @@ pub enum ZcashError {
     TxRejected,
     #[error("Chain reorganization")]
     Reorg,
+    #[error("Total input amounts and total output amounts must be equal")]
+    MismatchAmounts,
+    #[error("All transparent memos must be equal")]
+    UnequalTMemo,
     #[error("Assertion Failed: {0}")]
     AssertError(String),
 }
@@ -65,7 +69,8 @@ pub fn init_logger() {
         .init();
 }
 
-use crate::addr::{get_ovk, get_vault_address, match_with_blockchain_receiver, validate_address};
+use crate::addr::{get_ovk, get_vault_address, match_with_blockchain_receiver, validate_address,
+    best_recipient_of_ua, make_ua};
 use crate::chain::{broadcast_raw_tx, get_latest_height};
 use crate::pay::{
     apply_signatures, combine_vault, combine_vault_utxos,

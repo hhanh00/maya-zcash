@@ -190,40 +190,61 @@ pub fn combine_vault(height: u32, vault: Vec<u8>) -> Result<PartialTx, ZcashErro
     uniffi_async_export!(context, {
         let from = get_vault_address(vault.clone())?;
         let utxos = crate::wallet::list_utxos_async(&context, from.clone()).await?;
-        combine_vault_utxos_async(height, vault, utxos).await
+        let amount = utxos.iter().map(|u| u.value).sum::<u64>();
+        let output = Output { address: from, amount, memo: String::new() };
+        combine_vault_utxos_async(height, vault, vec![output], utxos).await
     })
 }
 
 pub fn combine_vault_utxos(
     height: u32,
     vault: Vec<u8>,
+    destination_vaults: Vec<Output>,
     utxos: Vec<UTXO>,
 ) -> Result<PartialTx, ZcashError> {
     uniffi_async_export!(_config, {
-        combine_vault_utxos_async(height, vault, utxos).await
+        combine_vault_utxos_async(height, vault, destination_vaults, utxos).await
     })
 }
 
 async fn combine_vault_utxos_async(
     height: u32,
     vault: Vec<u8>,
+    mut destination_vaults: Vec<Output>,
     utxos: Vec<UTXO>,
 ) -> Result<PartialTx, ZcashError> {
-    let from = get_vault_address(vault.clone())?;
-    let total = utxos.iter().map(|utxo| utxo.value).sum::<u64>();
-    let fee = utxos.len() as u64 * BASE_FEE;
-    let amount = total - fee;
-    let outputs = vec![Output {
-        address: from,
-        amount,
-        memo: String::new(),
-    }];
+    let utxo_total = utxos.iter().map(|utxo| utxo.value).sum::<u64>();
+    let vault_total = destination_vaults.iter().map(|o| o.amount).sum::<u64>();
+    if utxo_total != vault_total {
+        return Err(ZcashError::MismatchAmounts);
+    }
+    let mut fee = max(utxos.len(), destination_vaults.len()) as u64 * BASE_FEE;
+    // deduct fee from outputs starting from the first one
+    for v in destination_vaults.iter_mut() {
+        let f = min(fee, v.amount);
+        v.amount -= f;
+        fee -= f;
+        if fee == 0 { break; }
+    }
+    if let Some(first_tmemo) = destination_vaults.iter().map(|v| &v.memo).next() {
+        if destination_vaults.iter().map(|v| &v.memo).any(|m| m != first_tmemo) {
+            return Err(ZcashError::UnequalTMemo);
+        }
+    }
+
+    // Erase all transparent memos except the first one
+    // Txs can only have one transparent memo
+    let memos = destination_vaults.iter_mut().filter(|v| !v.memo.is_empty()).skip(1);
+    for m in memos {
+        m.memo = String::new();
+    }
+
     let mut tx_seed = [0u8; 32];
     OsRng.fill_bytes(&mut tx_seed);
     let mut partial_tx = PartialTx {
         height,
         inputs: utxos,
-        outputs,
+        outputs: destination_vaults,
         fee,
         tx_seed: tx_seed.to_vec(),
         sighashes: Sighashes::default(),

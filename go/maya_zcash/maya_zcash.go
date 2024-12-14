@@ -353,6 +353,15 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_best_recipient_of_ua(uniffiStatus)
+		})
+		if checksum != 49603 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_best_recipient_of_ua: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_broadcast_raw_tx(uniffiStatus)
 		})
 		if checksum != 14042 {
@@ -373,7 +382,7 @@ func uniffiCheckChecksums() {
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_maya_zcash_checksum_func_combine_vault_utxos(uniffiStatus)
 		})
-		if checksum != 39573 {
+		if checksum != 53276 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_combine_vault_utxos: UniFFI API checksum mismatch")
 		}
@@ -430,6 +439,15 @@ func uniffiCheckChecksums() {
 		if checksum != 39673 {
 			// If this happens try cleaning and rebuilding your project
 			panic("maya_zcash: uniffi_maya_zcash_checksum_func_list_utxos: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_maya_zcash_checksum_func_make_ua(uniffiStatus)
+		})
+		if checksum != 59823 {
+			// If this happens try cleaning and rebuilding your project
+			panic("maya_zcash: uniffi_maya_zcash_checksum_func_make_ua: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -1143,6 +1161,8 @@ var ErrZcashErrorNoOrchardReceiver = fmt.Errorf("ZcashErrorNoOrchardReceiver")
 var ErrZcashErrorNotEnoughFunds = fmt.Errorf("ZcashErrorNotEnoughFunds")
 var ErrZcashErrorTxRejected = fmt.Errorf("ZcashErrorTxRejected")
 var ErrZcashErrorReorg = fmt.Errorf("ZcashErrorReorg")
+var ErrZcashErrorMismatchAmounts = fmt.Errorf("ZcashErrorMismatchAmounts")
+var ErrZcashErrorUnequalTMemo = fmt.Errorf("ZcashErrorUnequalTMemo")
 var ErrZcashErrorAssertError = fmt.Errorf("ZcashErrorAssertError")
 
 // Variant structs
@@ -1272,6 +1292,42 @@ func (self ZcashErrorReorg) Is(target error) bool {
 	return target == ErrZcashErrorReorg
 }
 
+type ZcashErrorMismatchAmounts struct {
+	message string
+}
+
+func NewZcashErrorMismatchAmounts() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorMismatchAmounts{},
+	}
+}
+
+func (err ZcashErrorMismatchAmounts) Error() string {
+	return fmt.Sprintf("MismatchAmounts: %s", err.message)
+}
+
+func (self ZcashErrorMismatchAmounts) Is(target error) bool {
+	return target == ErrZcashErrorMismatchAmounts
+}
+
+type ZcashErrorUnequalTMemo struct {
+	message string
+}
+
+func NewZcashErrorUnequalTMemo() *ZcashError {
+	return &ZcashError{
+		err: &ZcashErrorUnequalTMemo{},
+	}
+}
+
+func (err ZcashErrorUnequalTMemo) Error() string {
+	return fmt.Sprintf("UnequalTMemo: %s", err.message)
+}
+
+func (self ZcashErrorUnequalTMemo) Is(target error) bool {
+	return target == ErrZcashErrorUnequalTMemo
+}
+
 type ZcashErrorAssertError struct {
 	message string
 }
@@ -1322,6 +1378,10 @@ func (c FfiConverterTypeZcashError) Read(reader io.Reader) *ZcashError {
 	case 7:
 		return &ZcashError{&ZcashErrorReorg{message}}
 	case 8:
+		return &ZcashError{&ZcashErrorMismatchAmounts{message}}
+	case 9:
+		return &ZcashError{&ZcashErrorUnequalTMemo{message}}
+	case 10:
 		return &ZcashError{&ZcashErrorAssertError{message}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeZcashError.Read()", errorID))
@@ -1345,11 +1405,52 @@ func (c FfiConverterTypeZcashError) Write(writer io.Writer, value *ZcashError) {
 		writeInt32(writer, 6)
 	case *ZcashErrorReorg:
 		writeInt32(writer, 7)
-	case *ZcashErrorAssertError:
+	case *ZcashErrorMismatchAmounts:
 		writeInt32(writer, 8)
+	case *ZcashErrorUnequalTMemo:
+		writeInt32(writer, 9)
+	case *ZcashErrorAssertError:
+		writeInt32(writer, 10)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeZcashError.Write", value))
+	}
+}
+
+type FfiConverterOptionalString struct{}
+
+var FfiConverterOptionalStringINSTANCE = FfiConverterOptionalString{}
+
+func (c FfiConverterOptionalString) Lift(rb RustBufferI) *string {
+	return LiftFromRustBuffer[*string](c, rb)
+}
+
+func (_ FfiConverterOptionalString) Read(reader io.Reader) *string {
+	if readInt8(reader) == 0 {
+		return nil
+	}
+	temp := FfiConverterStringINSTANCE.Read(reader)
+	return &temp
+}
+
+func (c FfiConverterOptionalString) Lower(value *string) RustBuffer {
+	return LowerIntoRustBuffer[*string](c, value)
+}
+
+func (_ FfiConverterOptionalString) Write(writer io.Writer, value *string) {
+	if value == nil {
+		writeInt8(writer, 0)
+	} else {
+		writeInt8(writer, 1)
+		FfiConverterStringINSTANCE.Write(writer, *value)
+	}
+}
+
+type FfiDestroyerOptionalString struct{}
+
+func (_ FfiDestroyerOptionalString) Destroy(value *string) {
+	if value != nil {
+		FfiDestroyerString{}.Destroy(*value)
 	}
 }
 
@@ -1617,6 +1718,18 @@ func ApplySignatures(vault []byte, ptx PartialTx, signatures [][]byte) ([]byte, 
 	}
 }
 
+func BestRecipientOfUa(address string) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_best_recipient_of_ua(FfiConverterStringINSTANCE.Lower(address), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
 func BroadcastRawTx(tx []byte) (string, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_maya_zcash_fn_func_broadcast_raw_tx(FfiConverterBytesINSTANCE.Lower(tx), _uniffiStatus)
@@ -1641,9 +1754,9 @@ func CombineVault(height uint32, vault []byte) (PartialTx, error) {
 	}
 }
 
-func CombineVaultUtxos(height uint32, vault []byte, utxos []Utxo) (PartialTx, error) {
+func CombineVaultUtxos(height uint32, vault []byte, destinationVaults []Output, utxos []Utxo) (PartialTx, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_maya_zcash_fn_func_combine_vault_utxos(FfiConverterUint32INSTANCE.Lower(height), FfiConverterBytesINSTANCE.Lower(vault), FfiConverterSequenceTypeUTXOINSTANCE.Lower(utxos), _uniffiStatus)
+		return C.uniffi_maya_zcash_fn_func_combine_vault_utxos(FfiConverterUint32INSTANCE.Lower(height), FfiConverterBytesINSTANCE.Lower(vault), FfiConverterSequenceTypeOutputINSTANCE.Lower(destinationVaults), FfiConverterSequenceTypeUTXOINSTANCE.Lower(utxos), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue PartialTx
@@ -1717,6 +1830,18 @@ func ListUtxos(address string) ([]Utxo, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterSequenceTypeUTXOINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func MakeUa(transparent *string, sapling *string, orchard *string) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeZcashError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_maya_zcash_fn_func_make_ua(FfiConverterOptionalStringINSTANCE.Lower(transparent), FfiConverterOptionalStringINSTANCE.Lower(sapling), FfiConverterOptionalStringINSTANCE.Lower(orchard), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
