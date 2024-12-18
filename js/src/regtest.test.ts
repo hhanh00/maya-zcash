@@ -6,7 +6,7 @@ import { Config, pkToAddr, testnetPrefix, sendRawTransaction,
     mainnetPrefix} from '.';
 
 // For ex, http://172.0.0.1:8232 for mainnet, port 18232 for regnet
-const host = process.env.ZCASHD_IP;
+const host = process.env.ZCASHD_URL;
 
 const config: Config = {
     server: {
