@@ -58,6 +58,7 @@ export async function buildTx(height: number, from: string, to: string, amount: 
         height: height,
         inputs: inputs,
         outputs: outputs,
+        fee: fee,
     }
 }
 

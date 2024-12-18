@@ -31,4 +31,5 @@ type Tx = {
     height: number;
     inputs: UTXO[];
     outputs: Output[];
+    fee: number;
 }
