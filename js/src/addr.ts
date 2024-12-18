@@ -4,8 +4,20 @@ import { sha256 } from '@noble/hashes/sha2';
 import { ripemd160 } from '@noble/hashes/ripemd160';
 import bs58check from 'bs58check';
 
-export const testnetPrefix = [29, 37];
-export const mainnetPrefix = [28, 189];
+export const testnetPrefix = [0x1d, 0x25];
+export const mainnetPrefix = [0x1c, 0xb8];
+
+export function isValidAddr(address: string, prefix: Uint8Array): boolean {
+    try {
+        const addrb = bs58check.decode(address);
+        if (Buffer.from(addrb.slice(0, 2)).compare(Buffer.from(prefix)) != 0)
+            throw new Error('Invalid prefix');
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
 
 export function skToAddr(sk: Uint8Array, prefix: Uint8Array) {
     const pk = secp256k1.getPublicKey(sk, true);

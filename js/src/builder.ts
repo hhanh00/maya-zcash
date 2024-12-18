@@ -5,6 +5,7 @@ import { addressToScript, memoToScript, writeSigScript } from "./script";
 import { writeCompactInt } from "./writer";
 import { Config, Output, UTXO } from "./types";
 import { getUTXOS } from "./rpc";
+import { isValidAddr, mainnetPrefix, testnetPrefix } from './addr';
 
 function getFee(utxos: UTXO[]): number {
     const BASE_FEE = 5000;
@@ -34,10 +35,19 @@ function selectUTXOS(utxos: UTXO[], amount: number): UTXO[] {
 
 // @ts-ignore
 export async function buildTx(height: number, from: string, to: string, amount: number, memo: string, config: Config): Promise<Tx> {
+    const prefixb = config.mainnet ? mainnetPrefix : testnetPrefix;
+    const prefix = Buffer.from(prefixb);
+    if (!isValidAddr(from, prefix)) throw new Error('Invalid "from" address');
+    if (!isValidAddr(to, prefix)) throw new Error('Invalid "to" address');
+    if (amount > 1e14) throw new Error('Amount too large');
+    if (memo.length > 80) throw new Error('Memo too long');
+
     const utxos = await getUTXOS(from, config);
     const inputs = selectUTXOS(utxos, amount);
     const fee = getFee(utxos);
     const change = sumBy(inputs, (u) => u.satoshis) - amount - fee;
+    if (change < 0)
+        throw new Error('Not enough funds');
 
     var outputs: Output[] = [];
     outputs.push({

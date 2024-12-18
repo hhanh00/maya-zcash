@@ -1,11 +1,16 @@
 
 import blake2b from 'blake2b-wasm';
 import { Config, pkToAddr, testnetPrefix, sendRawTransaction, 
-    buildTx, signAndFinalize } from '.';
+    buildTx, signAndFinalize, 
+    isValidAddr,
+    mainnetPrefix} from '.';
+
+// For ex, http://172.0.0.1:8232 for mainnet, port 18232 for regnet
+const host = process.env.ZCASHD_IP;
 
 const config: Config = {
     server: {
-        host: "http://172.16.11.111:18232",
+        host: host!,
         user: "mayachain",
         password: "password"
     },
@@ -26,6 +31,26 @@ test('tx fee', async () => {
         'MEMO', config)
     expect(utx.fee).toBe(15000)
 });
+
+test('not enough funds', () => {
+    const utx = buildTx(200, 'tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU', 'tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6', 10000000000,
+        'MEMO', config)
+    expect(utx).rejects.toThrow('Not enough funds')
+});
+
+test('invalid address', () => {
+    expect(isValidAddr('tmP9jLgTnhDdKdWJCm4BT2t6acGnxqP14yU', Buffer.from(testnetPrefix))).toBeTruthy();
+    expect(isValidAddr('t1R97mnhVqcE7Yq8p7yL4E29gy8etq9V9pG', Buffer.from(testnetPrefix))).toBeFalsy();
+    expect(isValidAddr('t1R97mnhVqcE7Yq8p7yL4E29gy8etq9V9pG', Buffer.from(mainnetPrefix))).toBeTruthy();
+    expect(isValidAddr('tminvalidaddress', Buffer.from(testnetPrefix))).toBeFalsy();
+});
+
+test('invalid t2t tx', () => {
+    // "from" address is from the wrong network (mainnet)
+    const utx = buildTx(200, 't1R97mnhVqcE7Yq8p7yL4E29gy8etq9V9pG', 'tmGys6dBuEGjch5LFnhdo5gpSa7jiNRWse6', 1000000,
+        'MEMO', config);
+    expect(utx).rejects.toThrow()
+})
 
 test('create/send t2t tx', async () => {
     await blake2b.ready();
