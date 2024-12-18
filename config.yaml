@@ -1,5 +1,5 @@
 server:
-  host: http://172.16.11.208:18232
+  host: ${ZCASHD_URL}
   user: mayachain
   password: password
 mainnet: false
