@@ -1,0 +1,35 @@
+{
+  "name": "maya-zcash-js",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack",
+    "start": "webpack serve"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/blake2b-wasm": "^2.4.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/lodash": "^4.17.13",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.7.2",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.2.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.6.1",
+    "axios": "^1.7.9",
+    "bl": "^6.0.16",
+    "blake2b-wasm": "^2.4.0",
+    "bs58check": "^4.0.0",
+    "buffer": "^6.0.3",
+    "js-sha256": "^0.11.0",
+    "js-yaml": "^4.1.0",
+    "json-rpc-2.0": "^1.7.0",
+    "lodash": "^4.17.21",
+    "@noble/curves": "^1.7.0"
+  }
+}

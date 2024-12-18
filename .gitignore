@@ -1,5 +1,7 @@
 debug/
 target/
 out/
+node_modules/
+dist/
 
 Cargo.lock
