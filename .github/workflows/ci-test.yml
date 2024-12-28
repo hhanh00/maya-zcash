@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ZCASHD_URL: http://localhost:18232
+      CGO_LDFLAGS: "-lmaya_zcash -L../target/release"
+    steps:
+    - uses: actions/checkout@v4
+    - name: install zcashd
+      run: |
+        sudo apt-get update && sudo apt-get install apt-transport-https wget gnupg2
+        wget -qO - https://apt.z.cash/zcash.asc | gpg --import
+        gpg --export B1C9095EAA1848DBB54D9DDA1D05FDC66B372CFE | sudo tee  /etc/apt/trusted.gpg.d/zcash.gpg >/dev/null
+        echo "deb [trusted=yes] https://apt.z.cash/ bullseye main" | sudo tee /etc/apt/sources.list.d/zcash.list
+        sudo apt-get update && sudo apt-get install zcash
+        mkdir $HOME/.zcash-params
+        pushd $HOME/.zcash-params
+        curl https://download.z.cash/downloads/sapling-output.params --output $HOME/.zcash-params/sapling-output.params
+        curl https://download.z.cash/downloads/sapling-spend.params --output $HOME/.zcash-params/sapling-spend.params
+        popd
+    - name: setup regtest
+      run: |
+        mkdir regtest
+        cp docs/zcash.conf regtest/
+        ./setup-regtest.sh
+    - name: build
+      run: |
+        cargo b -r
+    - name: test
+      run: |
+        pushd go
+        cp ../config.yaml .
+        sudo cp ../target/release/libmaya_zcash.so /usr/local/lib/
+        sudo ldconfig
+        go test ./maya_zcash -c .
+        ./maya_zcash.test
+        popd
+

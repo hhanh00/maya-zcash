@@ -1,0 +1,47 @@
+stages:
+  - build
+  - test
+
+variables:
+  ZCASHD_URL: "http://localhost:18232"
+  CGO_LDFLAGS: "-lmaya_zcash -L../target/release"
+
+build:
+  stage: build
+  image: rust:latest
+  before_script:
+    # Install required tools and zcashd
+    - apt-get update && apt-get install -y apt-transport-https wget gnupg2 curl
+    - wget -qO - https://apt.z.cash/zcash.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/zcash.gpg
+    - echo "deb [trusted=yes] https://apt.z.cash/ bullseye main" | tee /etc/apt/sources.list.d/zcash.list
+    - apt-get update && apt-get install -y zcash
+    # Download Zcash params
+    - mkdir -p $HOME/.zcash-params
+    - curl -o $HOME/.zcash-params/sapling-output.params https://download.z.cash/downloads/sapling-output.params
+    - curl -o $HOME/.zcash-params/sapling-spend.params https://download.z.cash/downloads/sapling-spend.params
+  script:
+    # Prepare regtest environment
+    - mkdir regtest
+    - cp docs/zcash.conf regtest/
+    - ./setup-regtest.sh
+    # Build the project
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/
+
+test:
+  stage: test
+  image: golang:latest
+  dependencies:
+    - build
+  script:
+    # Prepare the testing environment
+    - cp config.yaml target/release/
+    - sudo cp target/release/libmaya_zcash.so /usr/local/lib/
+    - sudo ldconfig
+    # Run Go tests
+    - pushd go
+    - go test ./maya_zcash -c .
+    - ./maya_zcash.test
+    - popd
