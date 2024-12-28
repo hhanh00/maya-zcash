@@ -1,0 +1,16 @@
+stages:
+  - build
+
+build:
+  stage: build
+  image: ubuntu:latest
+  script:
+    # Step 1: Check out the repository
+    - apt-get update && apt-get install -y git
+    - git clone $CI_REPOSITORY_URL .
+
+    # Step 2: Setup upterm session
+    # GitHub Action 'lhotari/action-upterm@v1' needs to be replaced with a manual setup
+    - apt-get install -y curl unzip
+    - curl -sSL https://github.com/owenthereal/upterm/releases/download/v0.7.5/upterm-linux-amd64.tar.gz | tar -xz -C /usr/local/bin
+    - upterm -h
